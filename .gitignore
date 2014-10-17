@@ -1,0 +1,5 @@
+*~
+.emacs.desktop*
+build
+localdefs.mk
+packages
