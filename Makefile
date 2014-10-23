@@ -1,29 +1,46 @@
-# To enabled incremental compilation you need the "jdeps" utility (available in
-# OpenJDK 1.8). If not found it will revert to full compilation every time one
-# or more source files are modified/added (and ONLY if modified/added).
+# make4java - A Makefile for Java projects
 #
-# NOTE: Only file modification/addition is supported, that is, if a (re)source
-#       file is removed you have to perform a full compilation ("make clean"
-#       followed by "make") in order to get rid of old classes/resources.
+# Written in 2014 by Francesco Lattanzio <franz.lattanzio@gmail.com>
 #
-# If you don't want to generate 1.8 bytecode, define the JAVAC variable in the
-# "localdefs.mk" file:
+# To the extent possible under law, the author have dedicated all
+# copyright and related and neighboring rights to this software to
+# the public domain worldwide. This software is distributed without
+# any warranty.
 #
-#   JAVAC := javac -source 1.7 -target 1.7 -bootclasspath /usr/lib/jvm/java-7-openjdk/jre/lib/rt.jar
+# You should have received a copy of the CC0 Public Domain Dedication
+# along with this software.
+# If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+
+# To enabled incremental compilation you need the "jdeps" utility
+# (available in OpenJDK 1.8). If not found it will revert to full
+# compilation every time one or more source files are modified or
+# added (and ONLY if modified or added).
 #
-# Choose source, target and bootclasspath's values appropriate for you project.
+# NOTE: Only file modification and/or addition is supported, that is,
+#       if a (re)source file is removed you have to perform a full
+#       compilation ("make clean" followed by "make") in order to get
+#       rid of the old classes and "filtered" resources.
 #
-# NOTE: For small projects a full compilation may be faster than an incremental
-#       compilation plus dependencies extration. In such cases you may disable
-#       "jdeps" adding "HAVE_JDEPS := false" to "localdefs.mk".
+# If you want to use jdeps but don't want to generate 1.8 bytecode,
+# just add the JAVAC variable to the "localdefs.mk" file:
+#
+#   JAVAC := javac -source 1.7 -target 1.7 \
+#            -bootclasspath /usr/lib/jvm/java-7-openjdk/jre/lib/rt.jar
+#
+# Choose appropriate source, target and bootclasspath's values for you
+# project.
+#
+# NOTE: For small projects a full compilation may be faster than an
+#       incremental compilation followed by a jdeps run. In such cases
+#       you may wish to disable jdeps -- add "HAVE_JDEPS := false" to
+#       "localdefs.mk".
 
 -include localdefs.mk
 
-# To change the value of the following variables, add them to "localdefs.mk".
+# To change the value of the following variables, add them to
+# "localdefs.mk".
 
-# Hardware driver support
-# NOTE: If DAHDI/Dialogic are not installed system-wide you may also need
-#       to define CPPFLAGS and LDFLAGS to point to the headers and libraries
+# Sample optional feature -- disabled by default
 ENABLE_FOO_FEATURE ?= false
 
 # Java tools
@@ -33,7 +50,7 @@ JAVAC ?= javac
 JAVAH ?= javah
 JDEPS ?= jdeps
 
-# Every UNIX-like OS should have these (and a Bourne-like shell).
+# Every UNIX-like OS should have these (and a Bourne-like shell)
 AWK ?= awk
 CAT ?= cat
 CHMOD ?= chmod
@@ -51,7 +68,7 @@ WHICH ?= which
 XARGS ?= xargs
 
 
-# Project structure
+# Project directory structure
 
 resources.jars := jars
 resources.libs := libs
