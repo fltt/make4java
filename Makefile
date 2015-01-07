@@ -226,7 +226,7 @@ endif # def HAVE_JDEPS
 
 
 # NOTE: The "empty" variable must NOT be defined
-CLASSPATH := -cp $(subst $(empty) $(empty),:,$(CLASSES_DIR) $(LIBRARIES))
+CLASSPATH := -cp $(subst $(empty) $(empty),:,$(strip $(CLASSES_DIR) $(LIBRARIES)))
 
 
 .PHONY: clean
