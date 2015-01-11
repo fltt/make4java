@@ -179,15 +179,15 @@ STAGE_DIR := $(BUILD_DIR)/stage
 PACKAGE_DIR := packages
 
 
-####################
-# Misc definitions #
-####################
+#############################
+# Miscellaneous definitions #
+#############################
 
 # Release version of the package (components have each their own version
 # numbers)
 release.version := 1.0.3
 
-# External dependencies
+# Retrieve all the external dependencies
 LIBRARIES := $(shell test -d $(EXTERNAL_LIBRARIES_DIR) && $(FIND) $(EXTERNAL_LIBRARIES_DIR) -name '*.jar')
 
 # The default target -- change it to whatever you want
@@ -200,7 +200,6 @@ ifndef BUILD_PHASE
 ####################
 # Main entry point #
 ####################
-
 
 # Locate jdeps and define JDEPS, unless HAVE_JDEPS is defined
 ifdef HAVE_JDEPS
@@ -408,9 +407,9 @@ $(BUILD_DIR) $(JARS_DIR) $(NATIVE_DIR) $(PACKAGE_DIR):
 ifeq ($(BUILD_PHASE),1)
 
 
-#################################################
-# Phase 1 - Collect source files to be compiled #
-#################################################
+##########################
+# Phase 1 - Source files #
+##########################
 
 # -sourcepath directories list 
 SOURCE_DIRECTORIES :=
@@ -457,6 +456,47 @@ $(JAVAC_SOURCE_FILES_LIST): | $(BUILD_DIR)
 	@: >$@
 
 
+# Take note of the source files to be compiled (see also
+# the BUILD_MAKE_RULES macro below)
+$(CLASSES_DIR)/%.class: | $(JAVAC_SOURCEPATHS_LIST) $(JAVAC_SOURCE_FILES_LIST) $(SOURCE_FILES_FULL_LIST) $(EXPORTED_CLASSES_LIST)
+	echo $< >>$(JAVAC_SOURCE_FILES_LIST)
+
+
+#########################
+# Phase 1 - JNI support #
+#########################
+
+# Classes files to be processed through javah
+JAVAH_CLASSES :=
+
+
+# Convert a classname into the corresponding source file name
+# NOTE: The source file name computed is not complete -- the path to
+#       the component's directory is missing
+
+# Arguments:
+#   $(1) - classname (in the package.subpackage.classname format)
+CLASSNAME_TO_SOURCEFILE = $(patsubst %,/$(SOURCES_PATH)/%.java,$(subst .,/,$(1)))
+
+
+# Store javah-processed class files and related source files -- it
+# must be created once at every run that's why we need the
+# clean_exported_classes_list target and the .PHONY special target
+# NOTE: The path to the source file is relative to the component
+#       directory -- it will be further processed in the main entry
+#       point rule to compute the complete path relative to
+#       the topmost directory
+
+.PHONY: clean_exported_classes_list $(EXPORTED_CLASSES_LIST)
+
+clean_exported_classes_list: | $(BUILD_DIR)
+	@: >$(EXPORTED_CLASSES_LIST)
+
+$(EXPORTED_CLASSES_LIST): | clean_exported_classes_list
+	@echo "Building $@" \
+	$(foreach var,$(JAVAH_CLASSES),$(shell echo '$(call CLASSNAME_TO_SOURCEFILE,$(var)) $(var)' >>$@))
+
+
 #############################
 # Phase 1 - build.mk macros #
 #############################
@@ -477,7 +517,7 @@ $(JAVAC_SOURCE_FILES_LIST): | $(BUILD_DIR)
 # Create rules to build a JAR from Java source files.
 # The phase 1 version only defines the library variables and the class
 # to source files dependencies.
-# The implicit %.class rule below will write all the classes older
+# The implicit %.class rule above will write all the classes older
 # than their own source file and/or older than any other class they
 # depends on (see the "-include $(JAVA_DEPENDENCIES)" below) to the
 # $(JAVAC_SOURCE_FILES_LIST) file.
@@ -513,31 +553,6 @@ $$(foreach var,$(4),$$(eval $$(call SOURCES_TO_CLASSES,$(3),$$(var)): $$(var)))
 $$(value $(1).buildname): $$(call SOURCES_TO_CLASSES,$(3),$(4)) $$(foreach var,$(6),$$(addprefix $(BUILD_DIR)/,$$(value $$(var).jarname)))
 
 endef # BUILD_MAKE_RULES
-
-
-# Classes files to be processed through javah
-JAVAH_CLASSES :=
-
-# Helper macro (see next rules)
-CLASSNAME_TO_SOURCEFILE = $(patsubst %,/$(SOURCES_PATH)/%.java,$(subst .,/,$(1)))
-
-
-# Store javah-processed class files and related source files -- it
-# must be created once at every run that's why we need the
-# clean_exported_classes_list target and the .PHONY special target
-# NOTE: The path to the source file is relative to the component
-#       directory -- it will be further processed in the main entry
-#       point rule to compute the complete path relative to
-#       the topmost directory
-
-.PHONY: clean_exported_classes_list $(EXPORTED_CLASSES_LIST)
-
-clean_exported_classes_list: | $(BUILD_DIR)
-	@: >$(EXPORTED_CLASSES_LIST)
-
-$(EXPORTED_CLASSES_LIST): | clean_exported_classes_list
-	@echo "Building $@" \
-	$(foreach var,$(JAVAH_CLASSES),$(shell echo '$(call CLASSNAME_TO_SOURCEFILE,$(var)) $(var)' >>$@))
 
 
 # For each native library built, the following variables will be
@@ -587,12 +602,77 @@ JAVAH_CLASSES += $(7)
 endef # BUILD_NATIVE_MAKE_RULES
 
 
-# See the BUILD_MAKE_RULES macro above
-$(CLASSES_DIR)/%.class: | $(JAVAC_SOURCEPATHS_LIST) $(JAVAC_SOURCE_FILES_LIST) $(SOURCE_FILES_FULL_LIST) $(EXPORTED_CLASSES_LIST)
-	echo $< >>$(JAVAC_SOURCE_FILES_LIST)
-
-
 else # eq ($(BUILD_PHASE),1)
+
+
+############################
+# Phase 3 - Resource files #
+############################
+
+# Build the sed script used to filter the resources -- for it must be
+# created once at every run, we need the clean_resources_filter_script
+# and .PHONY targets.
+# The script will parse the resource files looking for strings of the
+# form "${varname}" and will substitute those strings with the value of
+# the make variable named "varname".
+# Only the varnames listed in EXTRA_VARIABLES will be substituted -- any
+# string of the form "${varname}" where varname is not listed in
+# EXTRA_VARIABLES will be left untouched.
+
+.PHONY: clean_resources_filter_script $(RESOURCES_FILTER_SCRIPT)
+
+clean_resources_filter_script: | $(BUILD_DIR)
+	@: >$(RESOURCES_FILTER_SCRIPT)
+
+$(RESOURCES_FILTER_SCRIPT): | clean_resources_filter_script
+	@echo "Building $@" \
+	$(foreach var,$(EXTRA_VARIABLES),$(shell echo 's|$${$(var)}|$($(var))|g' >>$(RESOURCES_FILTER_SCRIPT)))
+
+
+# This rule applies the aforementioned sed script to all the resource
+# files.
+# NOTE: For text-only files this is good enough, but for binary,
+#       especially *big* binary files, this could cause some trouble.
+#       A possible solution would be to split the resources into two
+#       distinct directories -- one for resources to filter and the
+#       other for resources to keep as are.
+
+$(RESOURCES_DIR)/%: | $(RESOURCES_FILTER_SCRIPT)
+	$(MKDIR_P) $$(dirname $@) && \
+	$(SED) -f $(RESOURCES_FILTER_SCRIPT) $< >$@
+
+
+#########################
+# Phase 3 - JNI support #
+#########################
+
+# Find out where javah include files are stored.
+# As this is an expensive operation, we cache the result into
+# the $(JDK_INCLUDE) file.
+# As the $(JDK_INCLUDE) file is included as a dependency in every
+# native object/dependency list file, it will be built only if needed.
+
+$(JDK_INCLUDE):
+	@echo "Building $@" && \
+	dir=$$($(JAVA) -XshowSettings:properties -version 2>&1 | $(SED) -ne 's,^ *java\.home *= *\(.*\)$$,\1/../include,p') && \
+	if test -n "$$dir"; then \
+	  (cd "$$dir" && pwd) >$@; \
+	else \
+	  echo "ERROR: Cannot find JDK include directory"; \
+	  exit 1; \
+	fi
+
+
+# Supported architecture for native code -- $(ARCHITECTURE) must expand
+# to the name of an architecture supported by javah, it is used to
+# access architecture-specific javah include files
+ifeq ($(shell $(OS)),GNU/Linux)
+ARCHITECTURE := linux
+else ifeq ($(shell $(OS)),FreeBSD)
+ARCHITECTURE := freebsd
+else
+ARCHITECTURE := unknown
+endif
 
 
 #############################
@@ -681,37 +761,23 @@ $$(value $(1).buildname): $$(call SOURCES_TO_CLASSES,$(3),$(4)) \
 endef # BUILD_MAKE_RULES
 
 
-# Find out where javah include files are stored.
-# As this is an expensive operation, we cache the result into
-# the $(JDK_INCLUDE) file.
-# As the $(JDK_INCLUDE) file is included as a dependency in every
-# native object/dependency list file, it will be built only if needed.
+# Convert a C source file name to the file name of its "dependencies
+# file" -- a file used to store the names of all the files recursively
+# '#include'd
 
-$(JDK_INCLUDE):
-	@echo "Building $@" && \
-	dir=$$($(JAVA) -XshowSettings:properties -version 2>&1 | $(SED) -ne 's,^ *java\.home *= *\(.*\)$$,\1/../include,p') && \
-	if test -n "$$dir"; then \
-	  (cd "$$dir" && pwd) >$@; \
-	else \
-	  echo "ERROR: Cannot find JDK include directory"; \
-	  exit 1; \
-	fi
-
-
-# Supported architecture for native code -- $(ARCHITECTURE) must expand
-# to the name of an architecture supported by javah, this is used to
-# access architecture-specific javah include files
-ifeq ($(shell $(OS)),GNU/Linux)
-ARCHITECTURE := linux
-else ifeq ($(shell $(OS)),FreeBSD)
-ARCHITECTURE := freebsd
-else
-ARCHITECTURE := unknown
-endif
-
-
-# Helper macros (see next two macros)
+# Arguments:
+#   $(1) - component/native library name
+#   $(2) - component base directory
+#   $(3) - C source file name
 SOURCES_TO_DEPENDENCIES = $(patsubst $(2)$(NATIVE_SOURCES_PATH)/%.c,$(OBJECTS_DIR)/$(1)/%.d,$(3))
+
+
+# Convert a C source file name to the file name of its object file
+
+# Arguments:
+#   $(1) - component/native library name
+#   $(2) - component base directory
+#   $(3) - C source file name
 SOURCES_TO_OBJECTS = $(patsubst $(2)$(NATIVE_SOURCES_PATH)/%.c,$(OBJECTS_DIR)/$(1)/%.o,$(3))
 
 
@@ -791,39 +857,6 @@ $$(value $(1).buildname): $$(call SOURCES_TO_OBJECTS,$(1),$(3),$(4)) | $(NATIVE_
 endef # BUILD_NATIVE_MAKE_RULES
 
 
-# Build the sed script used to filter the resources -- for it must be
-# created once at every run, we need the clean_resources_filter_script
-# and .PHONY targets.
-# The script will parse the resource files looking for strings of the
-# form "${varname}" and will substitute those strings with the value of
-# the make variable named "varname".
-# Only the varnames listed in EXTRA_VARIABLES will be substituted -- any
-# string of the form "${varname}" where varname is not listed in
-# EXTRA_VARIABLES will be left untouched.
-
-.PHONY: clean_resources_filter_script $(RESOURCES_FILTER_SCRIPT)
-
-clean_resources_filter_script: | $(BUILD_DIR)
-	@: >$(RESOURCES_FILTER_SCRIPT)
-
-$(RESOURCES_FILTER_SCRIPT): | clean_resources_filter_script
-	@echo "Building $@" \
-	$(foreach var,$(EXTRA_VARIABLES),$(shell echo 's|$${$(var)}|$($(var))|g' >>$(RESOURCES_FILTER_SCRIPT)))
-
-
-# This rule applies the aforementioned sed script to all the resource
-# files.
-# NOTE: For text-only files this is good enough, but for binary,
-#       especially *big* binary files, this could cause some trouble.
-#       A possible solution would be to split the resources into two
-#       distinct directories -- one for resources to filter and the
-#       other for resources to keep as are.
-
-$(RESOURCES_DIR)/%: | $(RESOURCES_FILTER_SCRIPT)
-	$(MKDIR_P) $$(dirname $@) && \
-	$(SED) -f $(RESOURCES_FILTER_SCRIPT) $< >$@
-
-
 endif # eq ($(BUILD_PHASE),1)
 
 
@@ -844,6 +877,10 @@ ifeq ($(ENABLE_FOO_FEATURE),true)
 include foo/native/build.mk
 endif
 
+
+#######################
+# Miscellaneous stuff #
+#######################
 
 # If variable MISSING_RESOURCE_JARS is not empty, then some component
 # is including some undefined jar file.
