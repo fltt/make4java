@@ -61,7 +61,6 @@ AWK ?= awk
 CAT ?= cat
 # CC ?= cc # this variable is automatically set by make
 CHMOD ?= chmod
-CP ?= cp -f
 FGREP ?= fgrep
 FIND ?= find
 LINK ?= ln -f
@@ -71,7 +70,6 @@ OS ?= uname -o
 RM ?= rm -f
 SED ?= sed
 TAR ?= tar
-WHICH ?= which
 XARGS ?= xargs
 
 # Native code support -- if defined, the values of the CPPFLAGS and
@@ -867,9 +865,9 @@ endef # BUILD_NATIVE_MAKE_RULES
 endif # eq ($(BUILD_PHASE),1)
 
 
-########################
-# Components' build.mk #
-########################
+##############################
+# Components' build.mk files #
+##############################
 
 # Here are included all the build.mk of the project.
 # Order is not important, unless some component include some other
