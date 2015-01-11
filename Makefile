@@ -395,6 +395,13 @@ JARS_LIST :=
 # Lists missing included JARs
 MISSING_RESOURCE_JARS :=
 
+
+# Convert Java source file names into their corresponding class file
+# names
+
+# Arguments:
+#   $(1) - component base directory
+#   $(2) - Java source files list
 SOURCES_TO_CLASSES = $(patsubst $(1)$(SOURCES_PATH)/%.java,$(CLASSES_DIR)/%.class,$(2))
 
 
@@ -761,23 +768,23 @@ $$(value $(1).buildname): $$(call SOURCES_TO_CLASSES,$(3),$(4)) \
 endef # BUILD_MAKE_RULES
 
 
-# Convert a C source file name to the file name of its "dependencies
-# file" -- a file used to store the names of all the files recursively
+# Convert C source file names into the names of their "dependencies
+# files" -- files used to store the names of all the files recursively
 # '#include'd
 
 # Arguments:
 #   $(1) - component/native library name
 #   $(2) - component base directory
-#   $(3) - C source file name
+#   $(3) - C source file names
 SOURCES_TO_DEPENDENCIES = $(patsubst $(2)$(NATIVE_SOURCES_PATH)/%.c,$(OBJECTS_DIR)/$(1)/%.d,$(3))
 
 
-# Convert a C source file name to the file name of its object file
+# Convert C source file names into the names of their object files
 
 # Arguments:
 #   $(1) - component/native library name
 #   $(2) - component base directory
-#   $(3) - C source file name
+#   $(3) - C source file names
 SOURCES_TO_OBJECTS = $(patsubst $(2)$(NATIVE_SOURCES_PATH)/%.c,$(OBJECTS_DIR)/$(1)/%.o,$(3))
 
 
