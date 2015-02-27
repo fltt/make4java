@@ -41,9 +41,9 @@
 # "localdefs.mk".
 
 
-#############
-# Variables #
-#############
+#########
+# Tools #
+#########
 
 # Sample optional feature -- disabled by default
 ENABLE_FOO_FEATURE ?= false
@@ -383,15 +383,15 @@ LIBS_AND_VERS := $(shell echo $(basename $(notdir $(LIBRARIES))) | $(SED) -Ee 's
 $(foreach var,$(LIBS_AND_VERS),$(eval $(call PARSE_LIB_AND_VER,$(var))))
 
 
-#######################################################
-# Phase 1 & 3 common macros - Helper macros and stuff #
-#######################################################
+#########################################################
+# Phase 1 & 3 common macros - Helper macros and targets #
+#########################################################
 
 # Includes native libraries too
 JARS_LIST :=
 
-# Lists missing included JARs
-MISSING_RESOURCE_JARS :=
+# Lists missing included JARs and native libraries
+MISSING_INCLUDED_COMPONENTS :=
 
 
 # Convert Java source file names into their corresponding class file
@@ -687,14 +687,14 @@ endif
 # Verify the specified library has been defined.
 
 # Arguments:
-#   $(1) - component/JAR name
-define CHECK_INCLUDED_JAR =
+#   $(1) - component name
+define CHECK_INCLUDED =
 
 ifndef $(1).jarname
-MISSING_RESOURCE_JARS += $(1)
+MISSING_INCLUDED_COMPONENTS += $(1)
 endif
 
-endef # CHECK_INCLUDED_JAR
+endef # CHECK_INCLUDED
 
 
 # Compute the file name of a filtered resource
@@ -751,7 +751,7 @@ compile: $$(call SOURCES_TO_CLASSES,$(3),$(4))
 
 $$(foreach var,$(5),$$(eval $$(call RESOURCES_TO_JAR,$(3),$(1),$$(var)): $$(var)))
 
-$$(foreach var,$(6),$$(eval $$(call CHECK_INCLUDED_JAR,$$(var))))
+$$(foreach var,$(6),$$(eval $$(call CHECK_INCLUDED,$$(var))))
 
 $$(value $(1).buildname): $$(call SOURCES_TO_CLASSES,$(3),$(4)) \
                           $$(call RESOURCES_TO_JAR,$(3),$(1),$(5)) \
@@ -883,18 +883,18 @@ include foo/native/build.mk
 endif
 
 
-#######################
-# Miscellaneous stuff #
-#######################
+#########################
+# Miscellaneous targets #
+#########################
 
-# If variable MISSING_RESOURCE_JARS is not empty, then some component
-# is including some undefined jar file.
+# If variable MISSING_INCLUDED_COMPONENTS is not empty, then some
+# component is including some undefined jar file or native library.
 # This may also happen if the build.mk file defining the included jar
 # was itself included in this Makefile *after* the build.mk file
 # referencing the included jar (see previous comment).
 
-ifdef MISSING_RESOURCE_JARS
-$(error Missing extra jar(s): $(MISSING_RESOURCE_JARS))
+ifdef MISSING_INCLUDED_COMPONENTS
+$(error Missing included component(s): $(MISSING_INCLUDED_COMPONENTS))
 endif
 
 
