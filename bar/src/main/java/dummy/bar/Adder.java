@@ -1,7 +1,7 @@
 /*
  * make4java - A Makefile for Java projects
  *
- * Written in 2014 by Francesco Lattanzio <franz.lattanzio@gmail.com>
+ * Written in 2015 by Francesco Lattanzio <franz.lattanzio@gmail.com>
  *
  * To the extent possible under law, the author have dedicated all
  * copyright and related and neighboring rights to this software to
