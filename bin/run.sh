@@ -13,5 +13,5 @@
 # along with this software.
 # If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-cd $(dirname $(which "$0"))/..
+cd "$(dirname "$(which "$0")")/.."
 java -Djava.class.path=lib/bar-${bar.version}.jar -Djava.library.path=native dummy.bar.Main
