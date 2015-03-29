@@ -24,6 +24,6 @@ bar.name := FooBar Dummy Tool
 bar.vendor := FooTech
 bar.version := $(MK_VERSION)
 
-EXTRA_VARIABLES += bar.name bar.vendor bar.version
+RESOURCE_PLACEHOLDERS += bar.name bar.vendor bar.version
 
 $(eval $(call BUILD_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_RESOURCES),$(MK_INCLUDED_JARS)))
