@@ -547,7 +547,6 @@ $(RESOURCES_DIR)%: | $(RESOURCES_FILTER_SCRIPT)
 # 4) finally the AWK script is run through the class file name to
 #    partial source file name depencencies to convert them into class
 #    file name to component-complete source file name dependencies
-# !!! verify find's '-H' (or '-L') option portability !!!
 
 .PHONY: run-javac
 
