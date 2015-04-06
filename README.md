@@ -5,7 +5,7 @@ projects.
 
 If you have ever written a `Makefile` for GNU `make` and are tired of
 the slowness and clumsiness of the mainstream tools used to manage Java
-projects (e.g. `maven', `ant`, etc.), this project may help you take
+projects (e.g. `maven`, `ant`, etc.), this project may help you take
 full control of your own projects and drastically reduce the time
 required to compile them.
 
@@ -17,11 +17,11 @@ required to compile them.
 
 How?
 ----
-`make4java` is not a new tool you have to learn to use, but it is a
+**make4java** is not a new tool you have to learn to use, but it is a
 novelty way to use GNU `make` to manage Java projects -- with particular
 emphasis on big ones -- effectively.
 
-A project employing the `make4java` approach will be made of:
+A project employing the **make4java** approach will be made of:
 
 1. a `Makefile`
 2. one or more `build.mk` files
@@ -39,8 +39,8 @@ Also, it is possible to add resources to the JAR archives produced, as
 long as they are kept separate from the source code.
 
 To make things more tangible, a full blown sample Java project is
-provided: it uses almost all features of `make4java` (the only one left
-out being the external libraries management).
+provided: it uses almost all features of **make4java** (the only one
+left out being the external libraries management).
 
 If you're lucky, you'll only need to rewrite a few lines of the sample
 `Makefile` to adapt it to your project.
@@ -82,18 +82,24 @@ To enable it you can pass `ENABLE_FOO_FEATURE=true` to `make`, or,
 better, create a file named `localdefs.mk` beside the `Makefile`,
 containing the following text:
 
-  ENABLE_FOO_FEATURE = true
+```
+ENABLE_FOO_FEATURE = true
+```
 
 Native code support is available only for Linux and FreeBSD, however
-adding more architecture should be trivial.
+adding more architectures should be trivial.
 
 To compile everything run:
 
-  make
+```
+make
+```
 
 or:
 
-  make ENABLE_FOO_FEATURE=true
+```
+make ENABLE_FOO_FEATURE=true
+```
 
 A tar archive will be created under the `packages` directory.
 The `build` directory will contain a bunch of files and directories
@@ -106,7 +112,9 @@ What the sample project does is not really important.
 
 To clean up run:
 
-  make clean
+```
+make clean
+```
 
 For more information, read the sample `Makefile` -- it has plenty of
 comments.
@@ -114,9 +122,9 @@ comments.
 A real world example
 --------------------
 The [clone of the Mobicents jSS7][] is a bigger, real world project
-based on a previous (unreleased) version of `make4java`, where the
+based on a previous (unreleased) version of **make4java**, where the
 difference in performance between the original build system used
-(`maven`) and `make4java` is clearly noticeable.
+(`maven`) and **make4java** is clearly noticeable.
 
 Sure, you have to *manually* download all the external libraries
 required, but, on the other hand, this gives you the freedom to choose
@@ -199,7 +207,7 @@ directory of the Java source code tree (`SOURCES_PATH`), the name of
 file containing inter-class dependencies (`JAVA_DEPENDENCIES`), etc.
 
 For example, the sample project stores the Java source files in the
-'src/main/java' subdirectory under each component's base directory.
+`src/main/java` subdirectory under each component's base directory.
 To use another subdirectory, redefine the `SOURCES_PATH` variable.
 
 > **NOTE**: For the structure of you project is *not* a local matter,
@@ -226,7 +234,7 @@ scratch, but, whichever path you decide to take, keep in mind that:
    any other targets -- e.g., the `package` target in the "Project
    properties and structure" is the default target
 2. to add dependencies between the packaging targets and the projects'
-   components add as many `$(componentname.buildname)` as required to
+   components add as many `$(<componentname>.buildname)` as required to
    the target's prerequisites (more on this in the next section)
 
 Finally, "Clean-up" contains instructions to remove all the files
@@ -249,16 +257,20 @@ archive or a native library.
 
 A `build.mk` should contain a single macro invocation:
 
-  $(eval $(call BUILD_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_RESOURCES),$(MK_INCLUDED_JARS)))
+```
+$(eval $(call BUILD_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_RESOURCES),$(MK_INCLUDED_JARS)))
+```
 
 in case of a JAR archive, or:
 
-  $(eval $(call BUILD_NATIVE_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_CFLAGS),$(MK_LDFLAGS),$(MK_JAVAH_CLASSES)))
+```
+$(eval $(call BUILD_NATIVE_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_CFLAGS),$(MK_LDFLAGS),$(MK_JAVAH_CLASSES)))
+```
 
 in case of a native library.
 
 Those macros are defined, respectively, in the "Java components" and
-"Native components" parts of the `Makefile'.
+"Native components" parts of the `Makefile`.
 The arguments to the macros define properties of the component, namely:
 
 * `MK_NAME` is the name of the component
@@ -377,32 +389,36 @@ and `package.version` variables are automatically added to
 Any other variable you may want to be expanded during filtering must be
 explicitly added to `RESOURCE_PLACEHOLDERS`.
 
-Supported `make` version
-------------------------
+Supported `make` versions
+-------------------------
 To improve performances, the `Makefile` makes use of the `file`
 function, found in GNU `make` version 4.0 and successive.
 
 However, if version 4.0 is not available to you, there is still hope.
 The `file` function is used in rules like the following:
 
-  .PHONY: $(JAVAC_SOURCEPATHS_LIST)
+```
+.PHONY: $(JAVAC_SOURCEPATHS_LIST)
 
-  $(JAVAC_SOURCEPATHS_LIST): | $(BUILD_DIR)
-          @echo 'Building $@' \
-          $(file >$@) \
-          $(foreach var,$(SOURCE_DIRECTORIES),$(file >>$@,-sourcepath $(var)$(SOURCES_PATH)))
+$(JAVAC_SOURCEPATHS_LIST): | $(BUILD_DIR)
+        @echo 'Building $@' \
+        $(file >$@) \
+        $(foreach var,$(SOURCE_DIRECTORIES),$(file >>$@,-sourcepath $(var)$(SOURCES_PATH)))
+```
 
 The are several of them.
 All you need to do to fix them is to rewrite them as:
 
-  .PHONY: clean_javac_sourcepaths_list $(JAVAC_SOURCEPATHS_LIST)
+```
+.PHONY: clean_javac_sourcepaths_list $(JAVAC_SOURCEPATHS_LIST)
 
-  clean_javac_sourcepaths_list: | $(BUILD_DIR)
-          @: >'$(JAVAC_SOURCEPATHS_LIST)'
+clean_javac_sourcepaths_list: | $(BUILD_DIR)
+        @: >'$(JAVAC_SOURCEPATHS_LIST)'
 
-  $(JAVAC_SOURCEPATHS_LIST): | clean_javac_sourcepaths_list
-          @echo "Building $@" \
-          $(foreach var,$(SOURCE_DIRECTORIES),$(shell echo '-sourcepath $(var)$(SOURCES_PATH)' >>'$@'))
+$(JAVAC_SOURCEPATHS_LIST): | clean_javac_sourcepaths_list
+        @echo "Building $@" \
+        $(foreach var,$(SOURCE_DIRECTORIES),$(shell echo '-sourcepath $(var)$(SOURCES_PATH)' >>'$@'))
+```
 
 > **NOTE**: Remember that the white space indenting the recipe is not
 > SPACE characters but TAB characters.
