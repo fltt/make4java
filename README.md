@@ -126,14 +126,20 @@ based on a previous (unreleased) version of **make4java**, where the
 difference in performance between the original build system used
 (`maven`) and **make4java** is clearly noticeable.
 
-Sure, you have to *manually* download all the external libraries
-required, but, on the other hand, this gives you the freedom to choose
-which version of the libraries to use.
-When using `maven` with *big* projects, with tens or hundreds of
-dependencies it happens more often than not to be forced to install two
-slightly different version of the same library, just because they are
-themselves dependencies of other libraries whose dependencies you can't
-control -- or maybe can, with great effort.
+> **NOTE**: By default the `maven`-based build system will also run test
+> suites on the compiled code.
+> For a fair comparison you should disable them.
+
+Sure, **make4java** requires you to *manually* download all the external
+libraries, whereas `maven` downloads them automatically.
+At first this may seem to be a disadvantage, but when using `maven` with
+*big* projects, with tens or hundreds of dependencies it happens more
+often than not to include two slightly different version of the same
+library, just because they are themselves dependencies of other
+libraries whose dependencies you can't control -- or maybe can, with
+great effort.
+If you can control which version of a library to download, then you can
+choose the most suitable *single* version of that library.
 
 Tweak instructions
 ------------------
