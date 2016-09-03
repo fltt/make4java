@@ -323,7 +323,7 @@ endef # PARSE_LIB_AND_VER
 # directory, define the four library variables.
 # First, parse the file names and convert them into <libname>:<version>
 # strings, ...
-LIBS_AND_VERS := $(shell echo $(basename $(notdir $(LIBRARIES))) | $(SED) -Ee 's,([^ ]*)-(([0-9.]+)(-[^ ]*)?),\1:\2,g')
+LIBS_AND_VERS := $(shell echo $(basename $(notdir $(LIBRARIES))) | $(SED) 's|\([^ ]*\)-\(\([0-9.]\{1,\}\)\(-[^ ]*\)\{0,1\}\)|\1:\2|g')
 
 # ... then for each such string define the aforementioned library
 # variables.
@@ -559,8 +559,8 @@ ifdef JDEPS
 	    echo "Updating $(JAVA_DEPENDENCIES)" && \
 	    $(FIND) -H '$(CLASSES_ALIAS_DIR)' -name '*.class' -cnewer '$(JAVA_DEPENDENCIES)' >'$(JAVA_DEPENDENCIES).tmp' && \
 	    $(CAT) '$(JAVA_DEPENDENCIES).tmp' | while read cf; do \
-	      cf=$$(echo $$cf | $(SED) -e 's,\$$,\\$$,g'); \
-	      $(SED) -Ee "\,^$$cf: ,d" '$(JAVA_DEPENDENCIES)' >'$(JAVA_DEPENDENCIES).bak' && \
+	      cf=$$(echo $$cf | $(SED) 's|\$$|\\$$|g'); \
+	      $(SED) "\|^$$cf: |d" '$(JAVA_DEPENDENCIES)' >'$(JAVA_DEPENDENCIES).bak' && \
 	      $(MV) '$(JAVA_DEPENDENCIES).bak' '$(JAVA_DEPENDENCIES)'; \
 	    done \
 	  else \
@@ -568,12 +568,12 @@ ifdef JDEPS
 	    $(FIND) -H '$(CLASSES_ALIAS_DIR)' -name '*.class' >'$(JAVA_DEPENDENCIES).tmp'; \
 	  fi && \
 	  echo "BEGIN {" >'$(SOURCE_FILES_FULL_LIST).awk' && \
-	  $(SED) -Ee 's,^.*(/$(SOURCES_PATH).*)$$,sf["\1"]="&",' '$(SOURCE_FILES_FULL_LIST)' >>'$(SOURCE_FILES_FULL_LIST).awk' && \
+	  $(SED) 's|^.*\(/$(SOURCES_PATH).*\)$$|sf["\1"]="&"|' '$(SOURCE_FILES_FULL_LIST)' >>'$(SOURCE_FILES_FULL_LIST).awk' && \
 	  echo "}" >>'$(SOURCE_FILES_FULL_LIST).awk' && \
 	  echo '{ if (sf[$$2]) print $$1 " " sf[$$2] }' >>'$(SOURCE_FILES_FULL_LIST).awk' && \
 	  echo "$(CAT) '$(JAVA_DEPENDENCIES).tmp' | $(XARGS) $(JDEPS) -v" && \
 	  $(CAT) '$(JAVA_DEPENDENCIES).tmp' | $(XARGS) $(JDEPS) -v | \
-	    $(SED) -Ene 's,\.,/,g;s,^ +([^ ]+) *-> *([^ ]+).*$$,$(CLASSES_ALIAS_DIR)/\1.class: /$(SOURCES_PATH)\2.java,p' | \
+	    $(SED) -n 's|\.|/|g;s|^  *\([^ ]\{1,\}\) *-> *\([^ ]\{1,\}\).*$$|$(CLASSES_ALIAS_DIR)/\1.class: /$(SOURCES_PATH)\2.java|p' | \
 	    $(AWK) -f '$(SOURCE_FILES_FULL_LIST).awk' >>'$(JAVA_DEPENDENCIES)' && \
 	  $(RM) '$(SOURCE_FILES_FULL_LIST).awk' '$(JAVA_DEPENDENCIES).tmp'; \
 	fi
@@ -797,7 +797,7 @@ $(EXPORTED_CLASSES_LIST): | $(BUILD_DIR)
 # needed.
 $(JDK_INCLUDE): | $(BUILD_DIR)
 	@echo "Building $@" && \
-	dir="$$($(JAVA) -XshowSettings:properties -version 2>&1 | $(SED) -ne 's,^ *java\.home *= *\(.*\)$$,\1/../include,p')" && \
+	dir="$$($(JAVA) -XshowSettings:properties -version 2>&1 | $(SED) -n 's|^ *java\.home *= *\(.*\)$$|\1/../include|p')" && \
 	if test -n "$$dir"; then \
 	  (cd "$$dir" && pwd) >'$@'; \
 	else \
