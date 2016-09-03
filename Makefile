@@ -350,7 +350,7 @@ MISSING_INCLUDED_COMPONENTS :=
 
 # Classpath for javac and javah
 # NOTE: The "empty" variable must NOT be defined
-CLASSPATH := -cp $(subst $(empty) $(empty),:,$(strip $(CLASSES_DIR) $(LIBRARIES)))
+CLASSPATH := -classpath $(subst $(empty) $(empty),:,$(strip $(CLASSES_DIR) $(LIBRARIES)))
 
 
 # Verify the specified library has been defined
@@ -797,7 +797,7 @@ $(EXPORTED_CLASSES_LIST): | $(BUILD_DIR)
 # needed.
 $(JDK_INCLUDE): | $(BUILD_DIR)
 	@echo "Building $@" && \
-	dir="$$($(JAVA) -XshowSettings:properties -version 2>&1 | $(SED) -n 's|^ *java\.home *= *\(.*\)$$|\1/../include|p')" && \
+	dir="$$($(JAVA) -XshowSettings:properties 2>&1 | $(SED) -n 's|^ *java\.home *= *\(.*\)$$|\1/../include|p')" && \
 	if test -n "$$dir"; then \
 	  (cd "$$dir" && pwd) >'$@'; \
 	else \

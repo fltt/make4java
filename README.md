@@ -75,7 +75,7 @@ The sample project follows the above schema:
   `doc/README`
 
 To compile it, you need a JDK, version 1.3 or successive should do,
-however I've only tested version 1.7 and 1.8 of OpenJDK.
+however I've only tested version 1.6, 1.7 and 1.8 of OpenJDK.
 
 Native code is disabled by default.
 To enable it you can pass `ENABLE_FOO_FEATURE=true` to `make`, or,
