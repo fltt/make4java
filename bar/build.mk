@@ -22,8 +22,7 @@ MK_INCLUDED_JARS := foo
 
 bar.name := FooBar Dummy Tool
 bar.vendor := FooTech
-bar.version := $(MK_VERSION)
 
-RESOURCE_PLACEHOLDERS += bar.name bar.vendor bar.version
+RESOURCE_PLACEHOLDERS += bar.name bar.vendor
 
 $(eval $(call BUILD_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_RESOURCES),$(MK_INCLUDED_JARS)))
