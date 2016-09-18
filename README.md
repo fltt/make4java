@@ -79,36 +79,29 @@ however I've only tested version 1.6, 1.7 and 1.8 of OpenJDK.
 
 `configure.ac` requires Autoconf version 2.62 or successive.
 To build or rebuild the `configure` script run:
-
 ```
 autoreconf
 ```
-
 Then, to compile everything run:
-
 ```
 configure
 make
 ```
-
 If you prefer not to build your project in the same directory tree of
 the source code, just create a "build" directory and invoke the
 `configure` script from there:
-
 ```
 mkdir /path/to/build/tree
 cd /path/to/build/tree
 /path/to/source/tree/configure
 make
 ```
-
 Native code is disabled by default.
 To enable it you can pass `configure` the `--enable-foo-feature` option.
 I've tested native code only in Linux and FreeBSD, however adding more
 architectures should be trivial using Autoconf.
 
 For a list of supported options / environment variables run:
-
 ```
 configure --help
 ```
@@ -128,17 +121,13 @@ print some random text.
 What the sample project does is not really important.
 
 To clean up run:
-
 ```
 make clean
 ```
-
 To remove `configure` generated files run:
-
 ```
 make distclean
 ```
-
 For more information, read the sample `configure.ac` and `Makefile.in`.
 
 A real world example
@@ -196,20 +185,14 @@ All you need to do is to pass `configure` the `JAR`, `JAVAC`, `JAVAH`
 and `JDEPS` variables with appropriate values.
 
 > **NOTE**: The proper way to pass `configure` those variables is:
->
 > ```
 > configure JAVAC="/path/to/javac -options" JDEPS=/path/to/jdeps
 > ```
->
 > Do not use the following idiom:
->
 > ```
 > JAVAC="/path/to/javac -options" JDEPS=/path/to/jdeps configure
 > ```
->
 > nor:
->
->
 > ```
 > export JAVAC="/path/to/javac -options"
 > export JDEPS=/path/to/jdeps
@@ -231,7 +214,6 @@ For external *Java* libraries, use the method explained in the next
 section.
 
 For more information about Autoconf run:
-
 ```
 info autoconf
 ```
@@ -329,17 +311,13 @@ the `build.mk` deals with the properties of a single component, i.e., a
 JAR archive or a native library.
 
 A `build.mk` should contain a single macro invocation:
-
 ```
 $(eval $(call BUILD_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_RESOURCES),$(MK_INCLUDED_JARS)))
 ```
-
 in case of a JAR archive, or:
-
 ```
 $(eval $(call BUILD_NATIVE_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_CFLAGS),$(MK_LDFLAGS),$(MK_JAVAH_CLASSES)))
 ```
-
 in case of a native library.
 
 Those macros are defined, respectively, in the "Java components" and
@@ -460,7 +438,6 @@ function, found in GNU Make version 4.0 and successive.
 
 However, if version 4.0 is not available to you, there is still hope.
 The `file` function is used in rules like the following:
-
 ```
 .PHONY: $(JAVAC_SOURCEPATHS_LIST)
 
@@ -469,10 +446,8 @@ $(JAVAC_SOURCEPATHS_LIST): | $(BUILD_DIR)
         $(file >$@) \
         $(foreach var,$(SOURCE_DIRECTORIES),$(file >>$@,-sourcepath $(var)$(SOURCES_PATH)))
 ```
-
 The are several of them.
 All you need to do to fix them is to rewrite them as:
-
 ```
 .PHONY: clean_javac_sourcepaths_list $(JAVAC_SOURCEPATHS_LIST)
 
