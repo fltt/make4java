@@ -1,6 +1,6 @@
 # make4java - A Makefile for Java projects
 #
-# Written in 2015 by Francesco Lattanzio <franz.lattanzio@gmail.com>
+# Written in 2016 by Francesco Lattanzio <franz.lattanzio@gmail.com>
 #
 # To the extent possible under law, the author have dedicated all
 # copyright and related and neighboring rights to this software to
@@ -22,80 +22,75 @@
 #       old classes and "filtered" resources.
 #
 # If you want to use jdeps but don't want to generate 1.8 bytecode,
-# just add the JAVAC variable to the "localdefs.mk" file:
+# just pass the JAVAC variable to "configure", e.g.:
 #
-#   JAVAC := javac -source 1.7 -target 1.7 \
-#            -bootclasspath /usr/lib/jvm/java-7-openjdk/jre/lib/rt.jar
+#   ./configure "JAVAC=javac -source 1.7 -target 1.7 -bootclasspath \
+#                /usr/lib/jvm/java-7-openjdk/jre/lib/rt.jar"
 #
 # Choose appropriate source, target and bootclasspath's values for you
 # project.
 #
 # NOTE: For small projects a full compilation may be faster than an
 #       incremental compilation followed by a jdeps run. In such cases
-#       you may wish to disable jdeps: just add "HAVE_JDEPS := false"
-#       to "localdefs.mk".
+#       you may wish to run "configure" with the "--disable-jdeps"
+#       option.
 
--include localdefs.mk
-
-# To change the value of the following variables, add them to
-# "localdefs.mk".
-
+# Enable support for distinct "build tree" and "source tree"
+VPATH = @top_srcdir@
 
 #########
 # Tools #
 #########
 
 # Sample optional feature -- disabled by default
-ENABLE_FOO_FEATURE ?= false
+ENABLE_FOO_FEATURE = @ENABLE_FOO_FEATURE@
 
 # Java tools
-JAR ?= jar
-JAVA ?= java
-JAVAC ?= javac
-JAVAH ?= javah
-JDEPS ?= jdeps
+JAR = @JAR@
+JAVAC = @JAVAC@
+JAVAH = @JAVAH@
+JDEPS = @JDEPS@
 
 # Assorted tools -- every UNIX-like OS should have these (and a
 # Bourne-like shell)
-AWK ?= awk
-CAT ?= cat
-# CC ?= cc # this variable is predefined by make
-CHMOD ?= chmod
-# CPP ?= $(CC) -E # this variable is predefined by make
-FGREP ?= fgrep
-FIND ?= find
-LINK ?= ln -f
-MAKE_ALIAS ?= ln -s
-MKDIR ?= mkdir
-MKDIR_P ?= mkdir -p
-MV ?= mv
-OS ?= uname -o
-# RM ?= rm -f # this variable is predefined by make
-SED ?= sed
-TAR ?= tar
-XARGS ?= xargs
+AWK = @AWK@
+CC = @CC@
+CPP = @CPP@
+FGREP = @FGREP@
+FIND = @FIND@
+MAKE_ALIAS = @LN_S@
+MKDIR_P = @MKDIR_P@
+# RM = rm -f # this variable is predefined by make
+SED = @SED@
+TAR = @TAR@
+XARGS = @XARGS@
 
 # Native code support -- if defined, the values of the CPPFLAGS and
 # CFLAGS variables will be passed to the C compiler to compile the C
 # source files into object files, whereas the value of the LDFLAGS
 # variable will be used to link those object files into the native
 # dynamic library.
-CFLAGS ?=
-CPPFLAGS ?=
-LDFLAGS ?=
+CFLAGS = @CFLAGS@
+CPPFLAGS = @CPPFLAGS@
+JAVAH_CPPFLAGS = @JAVAH_CPPFLAGS@
+LDFLAGS = @LDFLAGS@
+LIBS = @LIBS@
 
 
 ####################################
 # Project properties and structure #
 ####################################
 
+# Name of the package
+package.name := @PACKAGE_NAME@
+
 # This and the next variable are used to build the name of the package
 # TAR archive
-PACKAGE_NAME := foobar
+PACKAGE_NAME := @PACKAGE_TARNAME@
 
 # Version number of the package (each component has its own version
 # number)
-package.version := 1.0.3
+package.version := @PACKAGE_VERSION@
 
 # The name of the directory inside the built JARs, that will hold
 # included JARs
@@ -107,13 +102,13 @@ resources.libs := libs
 
 
 # Component-relative path to Java source files
-SOURCES_PATH := src/main/java/
+SOURCES_PATH := src/main/java
 
 # Component-relative path to resource files
-RESOURCES_PATH := src/main/resources/
+RESOURCES_PATH := src/main/resources
 
 # Component-relative path to native C source files
-NATIVE_SOURCES_PATH := src/main/native/
+NATIVE_SOURCES_PATH := src/main/native
 
 
 # The name of a subdirectory of the topmost directory that holds all
@@ -122,115 +117,94 @@ NATIVE_SOURCES_PATH := src/main/native/
 #       all the dependencies required and should also instruct the user
 #       to download them into this directory, optionally arranging them
 #       into a hierachy of directories.
-EXTERNAL_LIBRARIES_DIR := libs/
+EXTERNAL_LIBRARIES_DIR := libs
 
 
 # The name of a subdirectory of the topmost directory that will hold all
 # the intermediate files produced by the build process
-BUILD_DIR := build/
+BUILD_DIR := build
 
 # The name of the file that will hold the list of all the source files
-SOURCE_FILES_FULL_LIST := $(BUILD_DIR)source-files
+SOURCE_FILES_FULL_LIST := $(BUILD_DIR)/source-files
 
 # The name of the file that will hold the .class to .java dependencies
-JAVA_DEPENDENCIES := $(BUILD_DIR)java-dependencies
+JAVA_DEPENDENCIES := $(BUILD_DIR)/java-dependencies
 
 # The name of the file that will hold all the -sourcepath options
 # for javac
-JAVAC_SOURCEPATHS_LIST := $(BUILD_DIR)javac-sourcepaths
+JAVAC_SOURCEPATHS_LIST := $(BUILD_DIR)/javac-sourcepaths
 
 # The name of the file that will hold the list of source files
 # to be compiled
-JAVAC_SOURCE_FILES_LIST := $(BUILD_DIR)javac-source-files
+JAVAC_SOURCE_FILES_LIST := $(BUILD_DIR)/javac-source-files
 
 
 # The name of the file that will hold the list of the class files -- and
 # their respective source files -- to be processed through javah
-EXPORTED_CLASSES_LIST := $(BUILD_DIR)exported-classes
+EXPORTED_CLASSES_LIST := $(BUILD_DIR)/exported-classes
 
 # The name of the file that will hold the list of the class files to be
 # reprocessed through javah, i.e., class files from the previous
 # variable that were modified since last compilation
-JAVAH_CLASSES_LIST := $(BUILD_DIR)javah-classes
-
-# The name of the file that will cache javah's include directory
-JDK_INCLUDE := $(BUILD_DIR)jdk-include
+JAVAH_CLASSES_LIST := $(BUILD_DIR)/javah-classes
 
 
 # The name of the directory that will hold all the class files
 # compiled...
-CLASSES_DIR := $(BUILD_DIR)classes/
+CLASSES_DIR := $(BUILD_DIR)/classes
 
 # ... and its alias directory
-CLASSES_ALIAS_DIR := $(BUILD_DIR)classes-alias
+CLASSES_ALIAS_DIR := $(BUILD_DIR)/classes-alias
 
 # The name of the directory that will hold all the resource files ready
 # to be stored in the JARs
-RESOURCES_DIR := $(BUILD_DIR)resources/
+RESOURCES_DIR := $(BUILD_DIR)/resources
 
 # The name of the file holding the sed script used to filter resource
 # files
-RESOURCES_FILTER_SCRIPT := $(BUILD_DIR)sed-script
+RESOURCES_FILTER_SCRIPT := $(BUILD_DIR)/sed-script
 
 # The name of the directory that will hold all the JAR files built
-JARS_DIR := $(BUILD_DIR)$(resources.jars)/
+JARS_DIR := $(BUILD_DIR)/$(resources.jars)
 
 
 # The name of the directory that will hold all the object files compiled
 # from native C code
-OBJECTS_DIR := $(BUILD_DIR)obj/
+OBJECTS_DIR := $(BUILD_DIR)/obj
 
 # The name of the directory that will hold all the include files
 # generated by javah
-INCLUDE_DIR := $(BUILD_DIR)include/
+INCLUDE_DIR := $(BUILD_DIR)/include
 
 # The name of the directory that will hold all the native library built
-NATIVE_DIR := $(BUILD_DIR)$(resources.libs)/
+NATIVE_DIR := $(BUILD_DIR)/$(resources.libs)
 
 
 # The name of the directory that will hold all the files to be put into
 # the package TAR archive
-STAGE_DIR := $(BUILD_DIR)stage/
+STAGE_DIR := $(BUILD_DIR)/stage
 
 # The name of the directory that will hold all the packages built (for
 # this sample Makefile there will be only one package)
-PACKAGE_DIR := packages/
+PACKAGE_DIR := packages
+
+# This is a list of targets that must not trigger automatic (re)build
+# of the .d files (see BUILD_NATIVE_COMPILE_RULES below)
+NO_BUILD_TARGETS := uninstall clean distclean dist doc
 
 
-# Locate jdeps and define JDEPS, unless HAVE_JDEPS is defined
-ifdef HAVE_JDEPS
-
-ifneq ($(HAVE_JDEPS),true)
-JDEPS :=
-endif
-
-else # def HAVE_JDEPS
-
-# If JDEPS contains an absolute file name, use it as is, else, if it is
-# relative, convert it to an absolute file name looking up in the PATH's
-# directories.
-# If the file cannot be found or does not exist, JDEPS will contain an
-# empty string.
-JDEPS := $(firstword $(wildcard $(if $(filter /%,$(JDEPS)),$(JDEPS),$(addsuffix /$(JDEPS),$(subst :, ,$(PATH))))))
-
-ifndef JDEPS
-$(info NOTE: jdeps not found: incremental compilation disabled)
-endif
-
-endif # def HAVE_JDEPS
-
-
-# The default target -- change it to whatever you want
-package:
+# The default target
+all:
 
 $(BUILD_DIR) $(PACKAGE_DIR):
-	$(MKDIR) '$@'
+	mkdir '$@'
 
 $(CLASSES_DIR) $(INCLUDE_DIR) $(JARS_DIR) $(NATIVE_DIR): | $(BUILD_DIR)
-	$(MKDIR) '$@'
+	mkdir '$@'
 
 $(CLASSES_ALIAS_DIR): | $(CLASSES_DIR)
-	$(MAKE_ALIAS) "$$(basename '$|')" '$@'
+	cd '$(dir $@)' && \
+	$(MAKE_ALIAS) '$(notdir $|)' '$(notdir $@)'
 
 
 ###################################
@@ -264,7 +238,7 @@ $(CLASSES_ALIAS_DIR): | $(CLASSES_DIR)
 # i.e., for each "varname" listed, the string "${varname}" will be
 # looked for in the resources and replaced with the value of
 # the variable "varname"
-RESOURCE_PLACEHOLDERS := package.version resources.jars resources.libs
+RESOURCE_PLACEHOLDERS := package.name package.version resources.jars resources.libs
 
 
 # The following macros are meant to be used in the components' build.mk.
@@ -272,15 +246,15 @@ RESOURCE_PLACEHOLDERS := package.version resources.jars resources.libs
 # (see the sample build.mk's for examples of use).
 
 # Arguments:
-#   $(1) - component base directory
+#   $(1) - component base directory (must end with '/')
 FIND_SOURCES = $(shell test -d $(1)$(SOURCES_PATH) && $(FIND) $(1)$(SOURCES_PATH) -name '*.java')
 
 # Arguments:
-#   $(1) - component base directory
+#   $(1) - component base directory (must end with '/')
 FIND_RESOURCES = $(shell test -d $(1)$(RESOURCES_PATH) && $(FIND) $(1)$(RESOURCES_PATH) -type f)
 
 # Arguments:
-#   $(1) - component base directory
+#   $(1) - component base directory (must end with '/')
 FIND_NATIVE_SOURCES = $(shell test -d $(1)$(NATIVE_SOURCES_PATH) && $(FIND) $(1)$(NATIVE_SOURCES_PATH) -name '*.c')
 
 
@@ -313,8 +287,9 @@ $$(MK_NAME).jarname := $(resources.jars)/$$(MK_JARNAME)
 
 RESOURCE_PLACEHOLDERS += $$(MK_NAME).version $$(MK_NAME).jarname
 
-$(BUILD_DIR)$$(value $$(MK_NAME).jarname): $$(value $$(MK_NAME).buildname) | $(JARS_DIR)
-	$(LINK) '$$<' '$$@'
+$(BUILD_DIR)/$$(value $$(MK_NAME).jarname): $$(value $$(MK_NAME).buildname) | $(JARS_DIR)
+	$(RM) '$$@' && \
+	ln '$$<' '$$@'
 
 endef # PARSE_LIB_AND_VER
 
@@ -370,27 +345,27 @@ endef # CHECK_INCLUDED
 # file names
 
 # Arguments:
-#   $(1) - component base directory
+#   $(1) - component base directory (must end with '/')
 #   $(2) - Java source file names
-SOURCES_TO_ALIAS_CLASSES = $(patsubst $(1)$(SOURCES_PATH)%.java,$(CLASSES_ALIAS_DIR)/%.class,$(2))
+SOURCES_TO_ALIAS_CLASSES = $(patsubst $(1)$(SOURCES_PATH)/%.java,$(CLASSES_ALIAS_DIR)/%.class,$(2))
 
 
 # Convert Java source file names into their corresponding class file
 # names
 
 # Arguments:
-#   $(1) - component base directory
+#   $(1) - component base directory (must end with '/')
 #   $(2) - Java source file names
-SOURCES_TO_CLASSES = $(patsubst $(1)$(SOURCES_PATH)%.java,$(CLASSES_DIR)%.class,$(2))
+SOURCES_TO_CLASSES = $(patsubst $(1)$(SOURCES_PATH)/%.java,$(CLASSES_DIR)/%.class,$(2))
 
 
 # Compute the file names of filtered resources
 
 # Arguments:
-#   $(1) - component base directory
+#   $(1) - component base directory (must end with '/')
 #   $(2) - component/JAR name
 #   $(3) - unfiltered resource file names
-RESOURCES_TO_JAR = $(patsubst $(1)$(RESOURCES_PATH)%,$(RESOURCES_DIR)$(2)/%,$(3))
+RESOURCES_TO_JAR = $(patsubst $(1)$(RESOURCES_PATH)/%,$(RESOURCES_DIR)/$(2)/%,$(3))
 
 
 .PHONY: compile
@@ -406,8 +381,9 @@ RESOURCES_TO_JAR = $(patsubst $(1)$(RESOURCES_PATH)%,$(RESOURCES_DIR)$(2)/%,$(3)
 # their respective source files and/or older than any other source files
 # they depends on (see the "-include $(JAVA_DEPENDENCIES)" below) to the
 # $(JAVAC_SOURCE_FILES_LIST) file.
-# The implicit $(RESOURCES_DIR)% rule below will filter all the resource
-# files before copying them into the $(RESOURCES_DIR) directory.
+# The implicit $(RESOURCES_DIR)/% rule below will filter all the
+# resource files before copying them into the $(RESOURCES_DIR)
+# directory.
 # Also, note that if the JAR archive is already existing, only the
 # classes, resources or included libraries modified since last build
 # will be updated.
@@ -415,7 +391,7 @@ RESOURCES_TO_JAR = $(patsubst $(1)$(RESOURCES_PATH)%,$(RESOURCES_DIR)$(2)/%,$(3)
 # Arguments:
 #   $(1) - component/JAR name
 #   $(2) - component/JAR version
-#   $(3) - component base directory
+#   $(3) - component base directory (must end with '/')
 #   $(4) - Java source files list
 #   $(5) - resource files list
 #   $(6) - JARs and/or native libraries to be included in this
@@ -430,7 +406,7 @@ MK_JARNAME := $(if $(2),$(1)-$(2).jar,$(1).jar)
 
 $(1).version := $(2)
 $(1).basename := $$(MK_JARNAME)
-$(1).buildname := $(JARS_DIR)$$(MK_JARNAME)
+$(1).buildname := $(JARS_DIR)/$$(MK_JARNAME)
 $(1).jarname := $(resources.jars)/$$(MK_JARNAME)
 
 RESOURCE_PLACEHOLDERS += $(1).version $(1).jarname
@@ -455,13 +431,14 @@ $$(foreach var,$(5),$$(eval $$(call RESOURCES_TO_JAR,$(3),$(1),$$(var)): $$(var)
 
 $$(value $(1).buildname): $$(call SOURCES_TO_CLASSES,$(3),$(4)) \
                           $$(call RESOURCES_TO_JAR,$(3),$(1),$(5)) \
-                          $$(foreach var,$(6),$$(addprefix $(BUILD_DIR),$$(value $$(var).jarname))) | $(JARS_DIR)
+                          $$(foreach var,$(6),$$(addprefix $(BUILD_DIR)/,$$(value $$(var).jarname))) | $(JARS_DIR)
 	if test -f '$$@'; then cmd=u; else cmd=c; fi && \
 	$(JAR) $$$${cmd}vf '$$@' \
-	  $$(addprefix -C $(CLASSES_DIR) ,$$(patsubst $(CLASSES_DIR)%,'%',$$(filter $(CLASSES_DIR)%,$$?) \
-	                                                                  $$(wildcard $$(patsubst %.class,%$$$$*.class,$$(filter $(CLASSES_DIR)%,$$?))))) \
-	  $$(addprefix -C $(RESOURCES_DIR)$(1) ,$$(patsubst $(RESOURCES_DIR)$(1)/%,'%',$$(filter $(RESOURCES_DIR)%,$$?))) \
-	  $$(addprefix -C $(BUILD_DIR) ,$$(patsubst $(BUILD_DIR)%,'%',$$(filter $(JARS_DIR)%,$$?)))
+	  $$(addprefix -C $(CLASSES_DIR) ,$$(patsubst $(CLASSES_DIR)/%,'%',$$(filter $(CLASSES_DIR)/%,$$?) \
+	                                                                  $$(wildcard $$(patsubst %.class,%$$$$*.class,$$(filter $(CLASSES_DIR)/%,$$?))))) \
+	  $$(addprefix -C $(RESOURCES_DIR)/$(1) ,$$(patsubst $(RESOURCES_DIR)/$(1)/%,'%',$$(filter $(RESOURCES_DIR)/%,$$?))) \
+	  $$(addprefix -C $(BUILD_DIR) ,$$(patsubst $(BUILD_DIR)/%,'%',$$(filter $(JARS_DIR)/%,$$?))) \
+	  $$(addprefix -C $(BUILD_DIR) ,$$(patsubst $(BUILD_DIR)/%,'%',$$(filter $(NATIVE_DIR)/%,$$?)))
 
 endef # BUILD_MAKE_RULES
 
@@ -499,7 +476,7 @@ $(JAVAC_SOURCE_FILES_LIST): | $(BUILD_DIR)
 
 
 # Take note of the source files to be compiled (see also
-# the BUILD_MAKE_RULES macro below)
+# the BUILD_MAKE_RULES macro above)
 $(CLASSES_ALIAS_DIR)/%.class: | $(JAVAC_SOURCE_FILES_LIST)
 	echo '$<' >>'$(JAVAC_SOURCE_FILES_LIST)'
 
@@ -528,8 +505,8 @@ $(RESOURCES_FILTER_SCRIPT): | $(BUILD_DIR)
 #       distinct directories -- one for resources to filter and the
 #       other for resources to keep as are.
 
-$(RESOURCES_DIR)%: | $(RESOURCES_FILTER_SCRIPT)
-	$(MKDIR_P) "$$(dirname '$@')" && \
+$(RESOURCES_DIR)/%: | $(RESOURCES_FILTER_SCRIPT)
+	$(MKDIR_P) '$(dir $@)' && \
 	$(SED) -f '$(RESOURCES_FILTER_SCRIPT)' '$<' >'$@'
 
 
@@ -558,22 +535,22 @@ ifdef JDEPS
 	  if test -f '$(JAVA_DEPENDENCIES)'; then \
 	    echo "Updating $(JAVA_DEPENDENCIES)" && \
 	    $(FIND) -H '$(CLASSES_ALIAS_DIR)' -name '*.class' -cnewer '$(JAVA_DEPENDENCIES)' >'$(JAVA_DEPENDENCIES).tmp' && \
-	    $(CAT) '$(JAVA_DEPENDENCIES).tmp' | while read cf; do \
+	    cat '$(JAVA_DEPENDENCIES).tmp' | while read cf; do \
 	      cf=$$(echo $$cf | $(SED) 's|\$$|\\$$|g'); \
 	      $(SED) "\|^$$cf: |d" '$(JAVA_DEPENDENCIES)' >'$(JAVA_DEPENDENCIES).bak' && \
-	      $(MV) '$(JAVA_DEPENDENCIES).bak' '$(JAVA_DEPENDENCIES)'; \
+	      mv '$(JAVA_DEPENDENCIES).bak' '$(JAVA_DEPENDENCIES)'; \
 	    done \
 	  else \
 	    echo "Building $(JAVA_DEPENDENCIES)" && \
 	    $(FIND) -H '$(CLASSES_ALIAS_DIR)' -name '*.class' >'$(JAVA_DEPENDENCIES).tmp'; \
 	  fi && \
 	  echo "BEGIN {" >'$(SOURCE_FILES_FULL_LIST).awk' && \
-	  $(SED) 's|^.*\(/$(SOURCES_PATH).*\)$$|sf["\1"]="&"|' '$(SOURCE_FILES_FULL_LIST)' >>'$(SOURCE_FILES_FULL_LIST).awk' && \
+	  $(SED) 's|^.*\(/$(SOURCES_PATH)/.*\)$$|sf["\1"]="&"|' '$(SOURCE_FILES_FULL_LIST)' >>'$(SOURCE_FILES_FULL_LIST).awk' && \
 	  echo "}" >>'$(SOURCE_FILES_FULL_LIST).awk' && \
 	  echo '{ if (sf[$$2]) print $$1 " " sf[$$2] }' >>'$(SOURCE_FILES_FULL_LIST).awk' && \
-	  echo "$(CAT) '$(JAVA_DEPENDENCIES).tmp' | $(XARGS) $(JDEPS) -v" && \
-	  $(CAT) '$(JAVA_DEPENDENCIES).tmp' | $(XARGS) $(JDEPS) -v | \
-	    $(SED) -n 's|\.|/|g;s|^  *\([^ ]\{1,\}\) *-> *\([^ ]\{1,\}\).*$$|$(CLASSES_ALIAS_DIR)/\1.class: /$(SOURCES_PATH)\2.java|p' | \
+	  echo "cat '$(JAVA_DEPENDENCIES).tmp' | $(XARGS) $(JDEPS) -v" && \
+	  cat '$(JAVA_DEPENDENCIES).tmp' | $(XARGS) $(JDEPS) -v | \
+	    $(SED) -n 's|\.|/|g;s|^  *\([^ ]\{1,\}\) *-> *\([^ ]\{1,\}\).*$$|$(CLASSES_ALIAS_DIR)/\1.class: /$(SOURCES_PATH)/\2.java|p' | \
 	    $(AWK) -f '$(SOURCE_FILES_FULL_LIST).awk' >>'$(JAVA_DEPENDENCIES)' && \
 	  $(RM) '$(SOURCE_FILES_FULL_LIST).awk' '$(JAVA_DEPENDENCIES).tmp'; \
 	fi
@@ -595,26 +572,15 @@ NATIVE_LIBRARIES :=
 # Class names to be processed through javah
 JAVAH_CLASS_NAMES :=
 
-# Current architecture -- $(ARCHITECTURE) must expand to the name of an
-# architecture supported by javah, it is used to access
-# architecture-specific javah include files
-ifeq ($(shell $(OS)),GNU/Linux)
-ARCHITECTURE := linux
-else ifeq ($(shell $(OS)),FreeBSD)
-ARCHITECTURE := freebsd
-else
-ARCHITECTURE := unknown
-endif
-
 
 # Convert C source file names into the names of their respective object
 # files
 
 # Arguments:
 #   $(1) - component/native library name
-#   $(2) - component base directory
+#   $(2) - component base directory (must end with '/')
 #   $(3) - C source file names
-SOURCES_TO_OBJECTS = $(patsubst $(2)$(NATIVE_SOURCES_PATH)%.c,$(OBJECTS_DIR)$(1)/%.o,$(3))
+SOURCES_TO_OBJECTS = $(patsubst $(2)$(NATIVE_SOURCES_PATH)/%.c,$(OBJECTS_DIR)/$(1)/%.o,$(3))
 
 
 # Convert C source file names into the names of their respective
@@ -623,16 +589,16 @@ SOURCES_TO_OBJECTS = $(patsubst $(2)$(NATIVE_SOURCES_PATH)%.c,$(OBJECTS_DIR)$(1)
 
 # Arguments:
 #   $(1) - component/native library name
-#   $(2) - component base directory
+#   $(2) - component base directory (must end with '/')
 #   $(3) - C source file names
-SOURCES_TO_DEPENDENCIES = $(patsubst $(2)$(NATIVE_SOURCES_PATH)%.c,$(OBJECTS_DIR)$(1)/%.d,$(3))
+SOURCES_TO_DEPENDENCIES = $(patsubst $(2)$(NATIVE_SOURCES_PATH)/%.c,$(OBJECTS_DIR)/$(1)/%.d,$(3))
 
 
 # Convert a classname into the corresponding class file name
 
 # Arguments:
 #   $(1) - classname (in the package.subpackage.classname format)
-CLASSNAME_TO_CLASSFILE = $(patsubst %,$(CLASSES_DIR)%.class,$(subst .,/,$(1)))
+CLASSNAME_TO_CLASSFILE = $(patsubst %,$(CLASSES_DIR)/%.class,$(subst .,/,$(1)))
 
 
 # Convert a classname into the corresponding source file name
@@ -641,7 +607,7 @@ CLASSNAME_TO_CLASSFILE = $(patsubst %,$(CLASSES_DIR)%.class,$(subst .,/,$(1)))
 
 # Arguments:
 #   $(1) - classname (in the package.subpackage.classname format)
-CLASSNAME_TO_SOURCEFILE = $(patsubst %,/$(SOURCES_PATH)%.java,$(subst .,/,$(1)))
+CLASSNAME_TO_SOURCEFILE = $(patsubst %,/$(SOURCES_PATH)/%.java,$(subst .,/,$(1)))
 
 
 # Convert a classname into the corresponding JNI include file name
@@ -672,7 +638,7 @@ CLASSNAME_TO_SHORT_INCLUDEFILE = $(patsubst %,%.h,$(subst .,_,$(1)))
 
 # Arguments:
 #   $(1) - classname (in the package.subpackage.classname format)
-CLASSNAME_TO_FULL_INCLUDEFILE = $(patsubst %,$(INCLUDE_DIR)%.h,$(subst .,_,$(1)))
+CLASSNAME_TO_FULL_INCLUDEFILE = $(patsubst %,$(INCLUDE_DIR)/%.h,$(subst .,_,$(1)))
 
 
 # Define the rules to compile object files (.o) and dependencies files
@@ -687,37 +653,29 @@ CLASSNAME_TO_FULL_INCLUDEFILE = $(patsubst %,$(INCLUDE_DIR)%.h,$(subst .,_,$(1))
 
 # Arguments:
 #   $(1) - component/native library name
-#   $(2) - component base directory
+#   $(2) - component base directory (must end with '/')
 #   $(3) - component-specific CFLAGS
 #   $(4) - C source file name
 define BUILD_NATIVE_COMPILE_RULES =
 
-ifeq ($(ARCHITECTURE),unknown)
-$$(error Unsupported OS: $(shell $(OS)))
-endif
-
 # The conditional avoids to compile the Java code (to build the JNI
-# header files the .d file depends on) when cleaning an already clean
-# source tree
-ifneq ($(MAKECMDGOALS),clean)
+# header files the .d file depends on) when executing targets that do
+# not build any object or executable file (e.g., the clean target)
+ifeq ($(findstring $(empty) $(MAKECMDGOALS) , $(NO_BUILD_TARGETS) ),)
 include $$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4))
 endif
 
 
-$$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4)): | $(JDK_INCLUDE)
-	$(MKDIR_P) "$$$$(dirname '$$@')" && \
-	JDK_INCLUDE_DIR="$$$$(cat '$(JDK_INCLUDE)')" && \
-	$(CPP) $(CPPFLAGS) -I "$$$$JDK_INCLUDE_DIR" \
-	  -I "$$$$JDK_INCLUDE_DIR/$(ARCHITECTURE)" -I '$(INCLUDE_DIR)' \
+$$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4)):
+	$(MKDIR_P) '$$(dir $$@)' && \
+	$(CPP) $(CPPFLAGS) $(JAVAH_CPPFLAGS) -I '$(INCLUDE_DIR)' \
 	  -MT '$$(call SOURCES_TO_OBJECTS,$(1),$(2),$(4)) $$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4))' \
 	  -M -MG -MF '$$@' '$(4)'
 
-$$(call SOURCES_TO_OBJECTS,$(1),$(2),$(4)): | $(JDK_INCLUDE)
-	$(MKDIR_P) "$$$$(dirname '$$@')" && \
-	JDK_INCLUDE_DIR="$$$$(cat '$(JDK_INCLUDE)')" && \
-	$(CC) $(CPPFLAGS) $(CFLAGS) -I "$$$$JDK_INCLUDE_DIR" \
-	  -I "$$$$JDK_INCLUDE_DIR/$(ARCHITECTURE)" -I '$(INCLUDE_DIR)' \
-	  $(3) -c -o '$$@' '$(4)'
+$$(call SOURCES_TO_OBJECTS,$(1),$(2),$(4)):
+	$(MKDIR_P) '$$(dir $$@)' && \
+	$(CC) $(CFLAGS) $(3) $(CPPFLAGS) $(JAVAH_CPPFLAGS) \
+	  -I '$(INCLUDE_DIR)' -c -o '$$@' '$(4)'
 
 endef # BUILD_NATIVE_COMPILE_RULES
 
@@ -731,7 +689,7 @@ endef # BUILD_NATIVE_COMPILE_RULES
 # Arguments:
 #   $(1) - component/native library name
 #   $(2) - component/native library version
-#   $(3) - component base directory
+#   $(3) - component base directory (must end with '/')
 #   $(4) - C source files list
 #   $(5) - C compiler flags (CFLAGS)
 #   $(6) - linker flags (LDFLAGS)
@@ -746,7 +704,7 @@ MK_LIBNAME := $(if $(2),$(1)-$(2).so,$(1).so)
 
 $(1).version := $(2)
 $(1).basename := $$(MK_LIBNAME)
-$(1).buildname := $(NATIVE_DIR)$$(MK_LIBNAME)
+$(1).buildname := $(NATIVE_DIR)/$$(MK_LIBNAME)
 $(1).jarname := $(resources.libs)/$$(MK_LIBNAME)
 
 RESOURCE_PLACEHOLDERS += $(1).version $(1).jarname
@@ -767,7 +725,7 @@ $$(call CLASSNAME_TO_FULL_INCLUDEFILE,$(7)): run-javah;
 $$(foreach var,$(4),$$(eval $$(call BUILD_NATIVE_COMPILE_RULES,$(1),$(3),$(5),$$(var))))
 
 $$(value $(1).buildname): $$(call SOURCES_TO_OBJECTS,$(1),$(3),$(4)) | $(NATIVE_DIR)
-	$(CC) $(LDFLAGS) $(6) -o '$$@' $$(patsubst %,'%',$$^)
+	$(CC) $(CFLAGS) $(5) $(LDFLAGS) $(6) -Wl,--no-undefined -o '$$@' $$(patsubst %,'%',$$^) $(LIBS)
 
 endef # BUILD_NATIVE_MAKE_RULES
 
@@ -788,24 +746,6 @@ $(EXPORTED_CLASSES_LIST): | $(BUILD_DIR)
 	$(foreach var,$(JAVAH_CLASS_NAMES),$(file >>$@,$(call CLASSNAME_TO_SOURCEFILE,$(var)) $(var)))
 
 
-# Find out where javah include files are stored.
-# For this is an expensive operation, we cache the result into
-# the $(JDK_INCLUDE) file.
-# For the $(JDK_INCLUDE) file is included as a dependency in every
-# native object and dependency file rule (see the
-# BUILD_NATIVE_COMPILE_RULES macro above), it will be built only if
-# needed.
-$(JDK_INCLUDE): | $(BUILD_DIR)
-	@echo "Building $@" && \
-	dir="$$($(JAVA) -XshowSettings:properties 2>&1 | $(SED) -n 's|^ *java\.home *= *\(.*\)$$|\1/../include|p')" && \
-	if test -n "$$dir"; then \
-	  (cd "$$dir" && pwd) >'$@'; \
-	else \
-	  echo "ERROR: Cannot find JDK include directory"; \
-	  exit 1; \
-	fi
-
-
 # The next rule will run javah to build the JNI header files -- only the
 # classes whose source file was modified since last run will be
 # processed through javah
@@ -815,15 +755,15 @@ $(JDK_INCLUDE): | $(BUILD_DIR)
 run-javah: | $(EXPORTED_CLASSES_LIST) $(INCLUDE_DIR)
 	@if test -s '$(EXPORTED_CLASSES_LIST)'; then \
 	  echo "Building $(JAVAH_CLASSES_LIST)"; \
-	  $(CAT) '$(EXPORTED_CLASSES_LIST)' | while read sf cn; do \
+	  cat '$(EXPORTED_CLASSES_LIST)' | while read sf cn; do \
 	    if $(FGREP) -q "$$sf" '$(JAVAC_SOURCE_FILES_LIST)'; then \
 	      echo "$$cn"; \
 	    fi \
 	  done >'$(JAVAH_CLASSES_LIST)'; \
 	  if test -s '$(JAVAH_CLASSES_LIST)'; then \
 	    echo "Building JNI headers"; \
-	    echo "$(CAT) '$(JAVAH_CLASSES_LIST)' | $(XARGS) $(JAVAH) -d '$(INCLUDE_DIR)' $(CLASSPATH)" && \
-	    $(CAT) '$(JAVAH_CLASSES_LIST)' | $(XARGS) $(JAVAH) -d '$(INCLUDE_DIR)' $(CLASSPATH); \
+	    echo "cat '$(JAVAH_CLASSES_LIST)' | $(XARGS) $(JAVAH) -d '$(INCLUDE_DIR)' $(CLASSPATH)" && \
+	    cat '$(JAVAH_CLASSES_LIST)' | $(XARGS) $(JAVAH) -d '$(INCLUDE_DIR)' $(CLASSPATH); \
 	  fi \
 	fi
 
@@ -839,13 +779,13 @@ run-javah: | $(EXPORTED_CLASSES_LIST) $(INCLUDE_DIR)
 # references the foo component, foo's build.mk must be included before
 # bar's.
 
-include foo/java/build.mk
-include bar/build.mk
+include @top_srcdir@/foo/java/build.mk
+include @top_srcdir@/bar/build.mk
 
 # Specifying optional components is as simple as adding a single
 # conditional
-ifeq ($(ENABLE_FOO_FEATURE),true)
-include foo/native/build.mk
+ifeq ($(ENABLE_FOO_FEATURE),yes)
+include @top_srcdir@/foo/native/build.mk
 endif
 
 
@@ -857,7 +797,7 @@ endif
 # the included JAR/native library (see previous comments).
 
 ifdef MISSING_INCLUDED_COMPONENTS
-$(error Missing included component(s): $(MISSING_INCLUDED_COMPONENTS))
+$(error Missing included component(s):$(MISSING_INCLUDED_COMPONENTS))
 endif
 
 
@@ -902,7 +842,7 @@ BAR_JAR_BUILD_LIST := $(bar.buildname)
 
 FOO_NATIVE_BUILD_LIST :=
 
-ifeq ($(ENABLE_FOO_FEATURE),true)
+ifeq ($(ENABLE_FOO_FEATURE),yes)
 FOO_NATIVE_BUILD_LIST += $(libfoo-linux.buildname)
 endif
 
@@ -911,9 +851,9 @@ endif
 # respective file names under the specified stage subdirectory
 
 # Arguments:
-#   $(1) - stage subdirectory (must end with '/' or be empty)
+#   $(1) - stage subdirectory (must begin with '/' or be empty)
 #   $(2) - stage files
-INTO_STAGE = $(addprefix $(STAGE_DIR)$(1),$(notdir $(2)))
+INTO_STAGE = $(addprefix $(STAGE_DIR)$(1)/,$(notdir $(2)))
 
 
 # Create rules to build stage subdirectories and define dependencies
@@ -921,7 +861,7 @@ INTO_STAGE = $(addprefix $(STAGE_DIR)$(1),$(notdir $(2)))
 # All the stage file names are collected in a variable whose name is
 # specified in the second argument -- it will be used to define the
 # package's prerequisites.
-# The '$(STAGE_DIR)%' and '$(STAGE_DIR)%.sh' rules below will copy the
+# The '$(STAGE_DIR)/%' and '$(STAGE_DIR)/%.sh' rules below will copy the
 # files into their place under the stage directory.
 # NOTE: The intended use is to invoke this macro for each directory in
 #       the package and with the list of files to put in it.
@@ -929,7 +869,7 @@ INTO_STAGE = $(addprefix $(STAGE_DIR)$(1),$(notdir $(2)))
 # Arguments:
 #   $(1) - build list files
 #   $(2) - stage files variable name
-#   $(3) - stage subdirectory (must end with '/' or be empty)
+#   $(3) - stage subdirectory (must begin with '/' or be empty)
 define ADD_PACKAGE_RULES =
 
 $(2) += $$(call INTO_STAGE,$(3),$(1))
@@ -943,42 +883,66 @@ endef # ADD_PACKAGE_RULES
 
 
 # Hard links are faster to build than copying files around
-$(STAGE_DIR)%:
-	$(LINK) $(patsubst %,'%',$^) '$@'
+$(STAGE_DIR)/%:
+	$(RM) '$@' && \
+	ln $(patsubst %,'%',$^) '$@'
 
 # *.sh files are treated specially: they are both filtered as resources
 # are and made executable
-$(STAGE_DIR)%.sh: | $(RESOURCES_FILTER_SCRIPT)
+$(STAGE_DIR)/%.sh: | $(RESOURCES_FILTER_SCRIPT)
 	$(SED) -f '$(RESOURCES_FILTER_SCRIPT)' '$<' >'$@' && \
-	$(CHMOD) a+x '$@'
+	chmod a+x '$@'
 
 
 # PACKAGE_STAGE_LIST will hold the list of the files that build up the
 # package -- it is used to specify the prerequisites of the package
 PACKAGE_STAGE_LIST :=
 
-$(eval $(call ADD_PACKAGE_RULES,$(BAR_BIN_BUILD_LIST),PACKAGE_STAGE_LIST,bin/))
-$(eval $(call ADD_PACKAGE_RULES,$(BAR_DOC_BUILD_LIST),PACKAGE_STAGE_LIST,doc/))
-$(eval $(call ADD_PACKAGE_RULES,$(BAR_JAR_BUILD_LIST),PACKAGE_STAGE_LIST,lib/))
-$(eval $(call ADD_PACKAGE_RULES,$(FOO_NATIVE_BUILD_LIST),PACKAGE_STAGE_LIST,native/))
+$(eval $(call ADD_PACKAGE_RULES,$(BAR_BIN_BUILD_LIST),PACKAGE_STAGE_LIST,/bin))
+$(eval $(call ADD_PACKAGE_RULES,$(BAR_DOC_BUILD_LIST),PACKAGE_STAGE_LIST,/doc))
+$(eval $(call ADD_PACKAGE_RULES,$(BAR_JAR_BUILD_LIST),PACKAGE_STAGE_LIST,/lib))
+$(eval $(call ADD_PACKAGE_RULES,$(FOO_NATIVE_BUILD_LIST),PACKAGE_STAGE_LIST,/native))
 
 
-$(PACKAGE_DIR)$(PACKAGE_NAME)-$(package.version).tar.gz: $(PACKAGE_STAGE_LIST) | $(PACKAGE_DIR)
+$(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version).tar.gz: $(PACKAGE_STAGE_LIST) | $(PACKAGE_DIR)
 	$(RM) '$@' && \
-	$(TAR) -czv -f '$@' -C '$(STAGE_DIR)' $(patsubst $(STAGE_DIR)%,'%',$^)
+	dir=$$(pwd) && \
+	cd '$(STAGE_DIR)' && \
+	$(TAR) cvzf "$$dir/$@" $(patsubst $(STAGE_DIR)/%,'%',$^)
 
 .PHONY: package
 
-package: $(PACKAGE_DIR)$(PACKAGE_NAME)-$(package.version).tar.gz
+package: $(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version).tar.gz
 
 
-############
-# Clean-up #
-############
+####################
+# Standard targets #
+####################
 
-.PHONY: clean
+.PHONY: all install install-strip uninstall
+
+all install install-strip: package
+
+uninstall:
+
+.PHONY: clean distclean
 
 # Everything this Makefile builds is stored under $(BUILD_DIR)
 # or $(PACKAGE_DIR)
 clean:
 	$(RM) -r '$(BUILD_DIR)' '$(PACKAGE_DIR)'
+
+distclean: clean
+	$(RM) Makefile config.status config.cache config.log \
+	      configure.lineno config.status.lineno
+
+.PHONY: check installcheck dist doc
+
+check installcheck:
+	@echo "Coming soon..."
+
+dist:
+	@echo "Coming soon..."
+
+doc:
+	@echo "Coming soon..."

@@ -1,6 +1,6 @@
 # make4java - A Makefile for Java projects
 #
-# Written in 2015 by Francesco Lattanzio <franz.lattanzio@gmail.com>
+# Written in 2016 by Francesco Lattanzio <franz.lattanzio@gmail.com>
 #
 # To the extent possible under law, the author have dedicated all
 # copyright and related and neighboring rights to this software to
@@ -17,12 +17,8 @@ MK_VERSION :=
 MK_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 MK_SOURCES := $(call FIND_NATIVE_SOURCES,$(MK_DIR))
-MK_CFLAGS := -fPIC -O
-ifeq ($(ARCHITECTURE),linux)
-MK_LDFLAGS := -shared -lc -ldl
-else # freebsd
-MK_LDFLAGS := -shared -lc
-endif
+MK_CFLAGS := -fPIC
+MK_LDFLAGS := -shared
 MK_JAVAH_CLASSES := dummy.foo.AdderImpl
 
 $(eval $(call BUILD_NATIVE_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_CFLAGS),$(MK_LDFLAGS),$(MK_JAVAH_CLASSES)))

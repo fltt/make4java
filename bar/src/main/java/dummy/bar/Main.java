@@ -55,7 +55,7 @@ public class Main {
         sb.append(props.get("version"));
         sb.append(" (");
         sb.append(props.get("package"));
-        sb.append('-');
+        sb.append(" rel. ");
         sb.append(props.get("release"));
         sb.append(')');
         return sb.toString();
