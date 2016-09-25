@@ -843,7 +843,7 @@ BAR_JAR_BUILD_LIST := $(bar.buildname)
 FOO_NATIVE_BUILD_LIST :=
 
 ifeq ($(ENABLE_FOO_FEATURE),yes)
-FOO_NATIVE_BUILD_LIST += $(libfoo-linux.buildname)
+FOO_NATIVE_BUILD_LIST += $(libfoo.buildname)
 endif
 
 

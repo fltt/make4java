@@ -18,7 +18,7 @@ AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 dnl *** Check options (first) ***
 AC_ARG_ENABLE([foo-feature],
-              [AS_HELP_STRING([--enable-foo-feature@<:@=yes|no@:>@],
+              [AS_HELP_STRING([--enable-foo-feature],
                               [enable the foo-feature @<:@default=no@:>@])],
               [AS_CASE([$enableval],
                        [yes|no], [],

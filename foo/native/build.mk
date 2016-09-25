@@ -11,8 +11,8 @@
 # along with this software.
 # If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
-MK_NAME := libfoo-linux
-MK_VERSION :=
+MK_NAME := libfoo
+MK_VERSION := 1.2.3
 
 MK_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 

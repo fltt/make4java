@@ -17,12 +17,24 @@ package dummy.foo;
 
 import dummy.bar.Adder;
 
+import java.io.InputStream;
+import java.util.Properties;
+
 
 public class AdderImpl implements Adder {
-    private static final String LIB_NAME = "foo-linux";
-
     static {
-        Runtime.getRuntime().loadLibrary(LIB_NAME);
+        InputStream in = AdderImpl.class.getResourceAsStream("properties");
+        if (in == null)
+            throw new Error("Missing properties");
+        Properties p = new Properties();
+        try {
+            p.load(in);
+            System.loadLibrary(p.getProperty("native.libname"));
+            in.close();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            throw new Error("Cannot load properties");
+        }
     }
 
 
