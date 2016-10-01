@@ -139,10 +139,6 @@ JAVAC_SOURCEPATHS_LIST := $(BUILD_DIR)/javac-sourcepaths
 JAVAC_SOURCE_FILES_LIST := $(BUILD_DIR)/javac-source-files
 
 
-# The name of the file that will hold the list of the class files -- and
-# their respective source files -- to be processed through javah
-EXPORTED_CLASSES_LIST := $(BUILD_DIR)/exported-classes
-
 # The name of the file that will hold the list of the class files to be
 # reprocessed through javah, i.e., class files from the previous
 # variable that were modified since last compilation
@@ -368,6 +364,13 @@ SOURCES_TO_CLASSES = $(patsubst $(1)$(SOURCES_PATH)/%.java,$(CLASSES_DIR)/%.clas
 RESOURCES_TO_JAR = $(patsubst $(1)$(RESOURCES_PATH)/%,$(RESOURCES_DIR)/$(2)/%,$(3))
 
 
+# Convert a classname into the corresponding class file name
+
+# Arguments:
+#   $(1) - classname (in the package.subpackage.classname format)
+CLASSNAME_TO_CLASSFILE = $(patsubst %,$(CLASSES_DIR)/%.class,$(subst .,/,$(1)))
+
+
 .PHONY: compile
 
 
@@ -435,7 +438,7 @@ $$(value $(1).buildname): $$(call SOURCES_TO_CLASSES,$(3),$(4)) \
 	if test -f '$$@'; then cmd=u; else cmd=c; fi && \
 	$(JAR) $$$${cmd}vf '$$@' \
 	  $$(addprefix -C $(CLASSES_DIR) ,$$(patsubst $(CLASSES_DIR)/%,'%',$$(filter $(CLASSES_DIR)/%,$$?) \
-	                                                                  $$(wildcard $$(patsubst %.class,%$$$$*.class,$$(filter $(CLASSES_DIR)/%,$$?))))) \
+	                                                                   $$(wildcard $$(patsubst %.class,%$$$$*.class,$$(filter $(CLASSES_DIR)/%,$$?))))) \
 	  $$(addprefix -C $(RESOURCES_DIR)/$(1) ,$$(patsubst $(RESOURCES_DIR)/$(1)/%,'%',$$(filter $(RESOURCES_DIR)/%,$$?))) \
 	  $$(addprefix -C $(BUILD_DIR) ,$$(patsubst $(BUILD_DIR)/%,'%',$$(filter $(JARS_DIR)/%,$$?))) \
 	  $$(addprefix -C $(BUILD_DIR) ,$$(patsubst $(BUILD_DIR)/%,'%',$$(filter $(NATIVE_DIR)/%,$$?)))
@@ -594,20 +597,11 @@ SOURCES_TO_OBJECTS = $(patsubst $(2)$(NATIVE_SOURCES_PATH)/%.c,$(OBJECTS_DIR)/$(
 SOURCES_TO_DEPENDENCIES = $(patsubst $(2)$(NATIVE_SOURCES_PATH)/%.c,$(OBJECTS_DIR)/$(1)/%.d,$(3))
 
 
-# Convert a classname into the corresponding class file name
+# Convert a class file name into the corresponding classname
 
 # Arguments:
-#   $(1) - classname (in the package.subpackage.classname format)
-CLASSNAME_TO_CLASSFILE = $(patsubst %,$(CLASSES_DIR)/%.class,$(subst .,/,$(1)))
-
-
-# Convert a classname into the corresponding source file name
-# NOTE: The source file name computed is not complete -- the path to
-#       the component's directory is missing
-
-# Arguments:
-#   $(1) - classname (in the package.subpackage.classname format)
-CLASSNAME_TO_SOURCEFILE = $(patsubst %,/$(SOURCES_PATH)/%.java,$(subst .,/,$(1)))
+#   $(1) - class file name
+CLASSFILE_TO_CLASSNAME = $(subst /,.,$(patsubst $(CLASSES_DIR)/%.class,%,$(1)))
 
 
 # Convert a classname into the corresponding JNI include file name
@@ -714,13 +708,13 @@ JAVAH_CLASS_NAMES += $(7)
 
 compile: $$(call SOURCES_TO_OBJECTS,$(1),$(3),$(4))
 
-run-javah: $$(call CLASSNAME_TO_CLASSFILE,$(7))
+$(JAVAH_CLASSES_LIST): $$(call CLASSNAME_TO_CLASSFILE,$(7))
 
-$$(call CLASSNAME_TO_SHORT_INCLUDEFILE,$(7)): run-javah
+$$(call CLASSNAME_TO_SHORT_INCLUDEFILE,$(7)): $(JAVAH_CLASSES_LIST)
 
 # The empty recipe force reevaluation of target timestamp after
 # run-javah has been processed
-$$(call CLASSNAME_TO_FULL_INCLUDEFILE,$(7)): run-javah;
+$$(call CLASSNAME_TO_FULL_INCLUDEFILE,$(7)): $(JAVAH_CLASSES_LIST);
 
 $$(foreach var,$(4),$$(eval $$(call BUILD_NATIVE_COMPILE_RULES,$(1),$(3),$(5),$$(var))))
 
@@ -730,41 +724,17 @@ $$(value $(1).buildname): $$(call SOURCES_TO_OBJECTS,$(1),$(3),$(4)) | $(NATIVE_
 endef # BUILD_NATIVE_MAKE_RULES
 
 
-# Store the list of class files to be processed through javah and the
-# Java source files they are compiled from -- the .PHONY special target
-# ensures that the list is rebuilt at every run
-# NOTE: The path to the source file is relative to the component
-#       directory -- it will be further processed in the run-javah
-#       recipe to compute the complete path relative to the project's
-#       topmost directory
+# The next rule will run javah to build the JNI header files -- only
+# the recompiled classes will be processed through javah
 
-.PHONY: $(EXPORTED_CLASSES_LIST)
-
-$(EXPORTED_CLASSES_LIST): | $(BUILD_DIR)
-	@echo "Building $@" \
+$(JAVAH_CLASSES_LIST): | $(INCLUDE_DIR)
+	@echo "Building $@"; \
 	$(file >$@) \
-	$(foreach var,$(JAVAH_CLASS_NAMES),$(file >>$@,$(call CLASSNAME_TO_SOURCEFILE,$(var)) $(var)))
-
-
-# The next rule will run javah to build the JNI header files -- only the
-# classes whose source file was modified since last run will be
-# processed through javah
-
-.PHONY: run-javah
-
-run-javah: | $(EXPORTED_CLASSES_LIST) $(INCLUDE_DIR)
-	@if test -s '$(EXPORTED_CLASSES_LIST)'; then \
-	  echo "Building $(JAVAH_CLASSES_LIST)"; \
-	  cat '$(EXPORTED_CLASSES_LIST)' | while read sf cn; do \
-	    if $(FGREP) -q "$$sf" '$(JAVAC_SOURCE_FILES_LIST)'; then \
-	      echo "$$cn"; \
-	    fi \
-	  done >'$(JAVAH_CLASSES_LIST)'; \
-	  if test -s '$(JAVAH_CLASSES_LIST)'; then \
-	    echo "Building JNI headers"; \
-	    echo "cat '$(JAVAH_CLASSES_LIST)' | $(XARGS) $(JAVAH) -d '$(INCLUDE_DIR)' $(CLASSPATH)" && \
-	    cat '$(JAVAH_CLASSES_LIST)' | $(XARGS) $(JAVAH) -d '$(INCLUDE_DIR)' $(CLASSPATH); \
-	  fi \
+	$(foreach var,$?,$(file >>$@,$(call CLASSFILE_TO_CLASSNAME,$(var)))) \
+	if test -s '$@'; then \
+	  echo "Building JNI headers"; \
+	  echo "cat '$@' | $(XARGS) $(JAVAH) -d '$(INCLUDE_DIR)' $(CLASSPATH)" && \
+	  cat '$@' | $(XARGS) $(JAVAH) -d '$(INCLUDE_DIR)' $(CLASSPATH); \
 	fi
 
 
