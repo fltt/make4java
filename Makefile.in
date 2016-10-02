@@ -243,7 +243,7 @@ RESOURCE_PLACEHOLDERS := package.name package.version resources.jars resources.l
 
 # Arguments:
 #   $(1) - component base directory (must end with '/')
-FIND_SOURCES = $(shell test -d $(1)$(SOURCES_PATH) && $(FIND) $(1)$(SOURCES_PATH) -name '*.java')
+FIND_SOURCES = $(shell test -d $(1)$(SOURCES_PATH) && $(FIND) $(1)$(SOURCES_PATH) -name '*.java' | LC_ALL=C $(SED) -n '\|/[A-Za-z_$$][0-9A-Za-z_$$]*\.|p')
 
 # Arguments:
 #   $(1) - component base directory (must end with '/')
