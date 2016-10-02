@@ -660,16 +660,20 @@ include $$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4))
 endif
 
 
+# -I. is required to find "config.h". If your project does not have
+# any "config.h" you can remove it.
 $$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4)):
 	$(MKDIR_P) '$$(dir $$@)' && \
-	$(CPP) $(CPPFLAGS) $(JAVAH_CPPFLAGS) -I '$(INCLUDE_DIR)' \
+	$(CPP) $(CPPFLAGS) $(JAVAH_CPPFLAGS) -I '$(INCLUDE_DIR)' -I. \
 	  -MT '$$(call SOURCES_TO_OBJECTS,$(1),$(2),$(4)) $$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4))' \
 	  -M -MG -MF '$$@' '$(4)'
 
+# -I. is required to find "config.h". If your project does not have
+# any "config.h" you can remove it.
 $$(call SOURCES_TO_OBJECTS,$(1),$(2),$(4)):
 	$(MKDIR_P) '$$(dir $$@)' && \
 	$(CC) $(CFLAGS) $(3) $(CPPFLAGS) $(JAVAH_CPPFLAGS) \
-	  -I '$(INCLUDE_DIR)' -c -o '$$@' '$(4)'
+	  -I '$(INCLUDE_DIR)' -I. -c -o '$$@' '$(4)'
 
 endef # BUILD_NATIVE_COMPILE_RULES
 
@@ -904,7 +908,7 @@ clean:
 
 distclean: clean
 	$(RM) Makefile config.status config.cache config.log \
-	      configure.lineno config.status.lineno
+	      configure.lineno config.status.lineno config.h
 
 .PHONY: check installcheck dist doc
 

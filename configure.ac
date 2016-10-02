@@ -120,4 +120,5 @@ AS_IF([test "x$missing_jdeps_programs" != x],
 AS_IF([test "x$TAR" = xtrue],
       [AC_MSG_WARN([could not find the tar utility, the tar package won't be built])])
 AC_CONFIG_FILES([Makefile])
+AC_CONFIG_HEADERS([config.h])
 AC_OUTPUT
