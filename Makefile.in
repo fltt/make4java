@@ -47,6 +47,7 @@ ENABLE_FOO_FEATURE = @ENABLE_FOO_FEATURE@
 
 # Java tools
 JAR = @JAR@
+JAVA = @JAVA@
 JAVAC = @JAVAC@
 JAVAH = @JAVAH@
 JDEPS = @JDEPS@
@@ -314,6 +315,9 @@ SOURCE_DIRECTORIES :=
 # Java source files
 SOURCE_FILES :=
 
+# List of targets to run all the tests
+TEST_TARGETS :=
+
 # Missing included JARs and native libraries
 # NOTE: A missing Java or native library may be caused by specifying the
 #       including component *before* the included component.
@@ -447,6 +451,63 @@ $$(value $(1).buildname): $$(call SOURCES_TO_CLASSES,$(3),$(4)) \
 	                                                               $$(filter $(NATIVE_DIR)/%,$$?)))
 
 endef # BUILD_MAKE_RULES
+
+
+# Arguments:
+#   $(1) - component/JAR name
+#   $(2) - component/JAR version
+#   $(3) - component base directory (must end with '/')
+#   $(4) - Java source files list
+#   $(5) - resource files list
+#   $(6) - list of component's names tests depend on (at run-time)
+#   $(7) - main class name (in the package.subpackage.classname format)
+define BUILD_TEST_MAKE_RULES =
+
+ifeq ($(1),)
+$$(error Missing jar basename)
+endif
+
+MK_JARNAME := $(if $(2),$(1)-$(2).jar,$(1).jar)
+
+$(1).version := $(2)
+$(1).basename := $$(MK_JARNAME)
+$(1).buildname := $(JARS_DIR)/$$(MK_JARNAME)
+$(1).jarname := $(resources.jars)/$$(MK_JARNAME)
+
+RESOURCE_PLACEHOLDERS += $(1).version $(1).jarname
+SOURCE_DIRECTORIES += $(3)
+SOURCE_FILES += $(4)
+TEST_TARGETS += check-$(1)
+
+$$(foreach var,$(6),$$(eval $$(call CHECK_INCLUDED,$$(var))))
+
+
+$$(foreach var,$(4),$$(eval $$(call SOURCES_TO_ALIAS_CLASSES,$(3),$$(var)): $$(var)))
+
+run-javac: $$(call SOURCES_TO_ALIAS_CLASSES,$(3),$(4))
+
+# The empty recipe force reevaluation of target timestamp after
+# run-javac has been processed
+$$(foreach var,$(4),$$(eval $$(call SOURCES_TO_CLASSES,$(3),$$(var)): run-javac;))
+
+compile: $$(call SOURCES_TO_CLASSES,$(3),$(4))
+
+$$(foreach var,$(5),$$(eval $$(call RESOURCES_TO_JAR,$(3),$(1),$$(var)): $$(var)))
+
+$$(value $(1).buildname): $$(call SOURCES_TO_CLASSES,$(3),$(4)) \
+                          $$(call RESOURCES_TO_JAR,$(3),$(1),$(5)) | $(JARS_DIR)
+	if test -f '$$@'; then cmd=u; else cmd=c; fi && \
+	$(JAR) $$$${cmd}vf '$$@' \
+	  $$(addprefix -C $(CLASSES_DIR) ,$$(patsubst $(CLASSES_DIR)/%,'%',$$(filter $(CLASSES_DIR)/%,$$?) \
+	                                                                   $$(wildcard $$(patsubst %.class,%$$$$*.class,$$(filter $(CLASSES_DIR)/%,$$?))))) \
+	  $$(addprefix -C $(RESOURCES_DIR)/$(1) ,$$(patsubst $(RESOURCES_DIR)/$(1)/%,'%',$$(filter $(RESOURCES_DIR)/%,$$?)))
+
+check-$(1): $$(value $(1).buildname) \
+            $$(foreach var,$(6),$$(value $$(var).buildname))
+	$(JAVA) '-Djava.class.path=$$(subst $$(empty) $$(empty),:,$$(strip $$^))' \
+	  '-Djava.library.path=$(NATIVE_DIR)' $(7)
+
+endef # BUILD_TEST_MAKE_RULES
 
 
 # Store a list of -sourcepath directories -- the .PHONY special target
@@ -765,6 +826,7 @@ include @top_srcdir@/bar/java/build.mk
 # conditional
 ifeq ($(ENABLE_FOO_FEATURE),yes)
 include @top_srcdir@/foo/native/build.mk
+include @top_srcdir@/foo/test/build.mk
 endif
 
 
@@ -917,8 +979,7 @@ distclean: clean
 
 .PHONY: check installcheck dist doc
 
-check installcheck:
-	@echo "Coming soon..."
+check installcheck: $(TEST_TARGETS)
 
 dist:
 	@echo "Coming soon..."

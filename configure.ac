@@ -33,7 +33,7 @@ AC_ARG_ENABLE([jdeps],
                        [AC_MSG_ERROR([--enable-jdeps was given an invalid argument])])],
               [enable_jdeps=check])
 dnl Enable checking for tools required to compile native code only if
-dnl needed
+dnl needed.
 enable_native=no
 AS_IF([test "x$enable_foo_feature" = xyes],
       [enable_native=yes])
@@ -42,7 +42,7 @@ dnl *** Check for tools required unconditionally ***
 dnl AC_PROG_LN_S always define something
 AC_PROG_LN_S
 AC_ARG_VAR([LN_S], [ln -s command])dnl
-dnl AC_PROG_MKDIR_P always define something
+dnl AC_PROG_MKDIR_P always define something.
 AC_PROG_MKDIR_P
 AC_ARG_VAR([MKDIR_P], [mkdir -p command])dnl
 AC_PROG_SED
@@ -53,7 +53,7 @@ AC_CHECK_PROGS([FIND], [find])
 AC_ARG_VAR([FIND], [find command])dnl
 AS_IF([test "x$FIND" = x],
       [missing_programs="$missing_programs find"])
-dnl Won't build the tar package if not found, see below
+dnl Won't build the tar package if not found, see below.
 AC_CHECK_PROGS([TAR], [tar], [true])
 AC_ARG_VAR([TAR], [tar command])dnl
 FLTT_PROG_JAVAC
@@ -62,6 +62,9 @@ AS_IF([test "x$JAVAC" = x],
 FLTT_PROG_JAR
 AS_IF([test "x$JAR" = x],
       [missing_programs="$missing_programs jar"])
+FLTT_PROG_JAVA
+AS_IF([test "x$JAVA" = x],
+      [missing_programs="$missing_programs java"])
 dnl *** Check for tools required only when compiling native code ***
 dnl NOTE: Autoconf expands all the AC_REQUIRE'd macros outside
 dnl       conditional blocks on purpose. To ensure that all those
@@ -84,6 +87,8 @@ dnl AC_PROG_GREP is AC_REQUIRE'd by AC_PROG_FGREP.
 AC_PROG_GREP
 AC_PROG_FGREP
 AC_ARG_VAR([FGREP], [fgrep command])dnl
+dnl AC_LANG_COMPILER is indirectly AC_REQUIRE'd by FLTT_PROG_JAVAH.
+AC_LANG_COMPILER(C)
 FLTT_PROG_JAVAH
 AS_IF([test "x$JAVAH" = x],
       [missing_programs="$missing_programs javah"],

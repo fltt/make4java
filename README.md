@@ -15,7 +15,7 @@ required to compile them.
 How?
 ----
 **make4java** is not a new tool you have to learn to use, but it is a
-novelty way to use GNU Make to manage Java projects -- with particular
+new way to use GNU Make to manage Java projects -- with particular
 emphasis on big ones -- effectively.
 
 A project employing the **make4java** approach will be made of:
@@ -28,8 +28,8 @@ A project employing the **make4java** approach will be made of:
 The `configure.ac` and the `Makefile.in` will be copies of the ones
 provided here, modified to fit the project's specific requirements.
 
-The `build.mk` files are written from scratch, one for each JAR archive
-or native library.
+The `build.mk` files are written from scratch, one for each JAR archive,
+test suite or native library.
 
 The source code can be both Java or native C code interfaced to the JVM
 through the JNI.
@@ -37,8 +37,7 @@ Also, it is possible to add resources to the JAR archives produced, as
 long as they are kept separate from the source code.
 
 To make things more tangible, a full blown sample Java project is
-provided: it uses almost all features of **make4java** (the only one
-left out being the external libraries management).
+provided: it uses most of the features of **make4java**.
 
 If you're lucky, you'll only need to change a few lines of the sample
 `configure.ac` and `Makefile.in` to adapt them to your project.
@@ -54,9 +53,9 @@ The sample project
 A typical Java project has the following structure:
 
 * the whole project is split into a number of "components", each one
-  containing everything needed to build a JAR archive or a native
-  library, i.e., source code, resources, external Java libraries and
-  even JAR archives or native libraries from some other component
+  containing everything needed to build a JAR archive, a test suite or a
+  native library, i.e., source code, resources, external Java libraries
+  and even JAR archives or native libraries from some other component
 * inside each component, source code and resources are both organised
   hierarchically but rooted on distinct directories
 * the result of the build process is some kind of archive containing the
@@ -66,13 +65,16 @@ A typical Java project has the following structure:
 
 The sample project follows the above schema:
 
-* there are three components: `bar`, `foo/java` and `foo/native`, where
-  `bar`'s JAR archive will contain `foo/java`'s JAR archive
-* the Java source code is rooted on `src/main/java`, the native code on
-  `src/main/native` and the resources on `src/main/resources`
-* building the sample project will yield a `.tar.gz` containing `bar`'s
-  JAR archive, `foo/native`'s native library, `bin/run.sh` and
-  `doc/README`
+* there are four components: `bar/java`, `foo/java`, `foo/native` and
+  `foo/test`, where `bar/java`'s JAR archive will contain `foo/java`'s
+  JAR archive
+* testing is performed through a dedicated components, `foo/test` -- it
+  will be built only when / if running the tests
+* both Java and native source code are rooted on `src` and the resources
+  on `resources`
+* building the sample project will yield a `.tar.gz` containing
+  `bar/java`'s JAR archive, `foo/native`'s native library, `bin/run.sh`
+  and `doc/README`
 
 To compile it, you need a JDK, version 1.3 or successive should do,
 however I've only tested version 1.6, 1.7 and 1.8 of OpenJDK.
@@ -84,16 +86,22 @@ To build or rebuild the `configure` script run:
 autoreconf
 ```
 
-Then, to compile everything run:
+Then, to build the TAR package run:
 
 ```
 configure
 make
 ```
 
+And to run the tests:
+
+```
+make check
+```
+
 If you prefer not to build your project in the same directory tree of
-the source code, just create a "build" directory and invoke the
-`configure` script from there:
+the source code, just create a "build" directory somewhere and invoke
+the `configure` script from there:
 
 ```
 mkdir /path/to/build/tree
@@ -102,10 +110,12 @@ cd /path/to/build/tree
 make
 ```
 
-Native code is disabled by default.
-To enable it you can pass `configure` the `--enable-foo-feature` option.
-I've tested native code only in Linux and FreeBSD, however adding more
-architectures should be trivial using Autoconf.
+Native code and the tests (which check the native code) are disabled by
+default.
+To enable them you can pass `configure` the `--enable-foo-feature`
+option.
+I've tested the native code only in Linux and FreeBSD, however adding
+more architectures should be trivial using Autoconf.
 
 For a list of supported options / environment variables run:
 
@@ -118,14 +128,15 @@ configure --help
 > This is so, for I chose not to install / deploy anything but to build
 > a TAR package (which is what I usually do with my Java projects).
 
-A TAR archive will be created under the `packages` directory.
+The TAR archive will be created under the `packages` directory.
 The `build` directory will contain a bunch of files and directories
 required to build the package and keep the current status of the source
 code.
 
 You can unpack the package and run the `bin/run.sh` script -- it will
 print some random text.
-What the sample project does is not really important.
+What the sample project does is not really important -- it is really
+just a template project I use to write new ones.
 
 To clean up run:
 
@@ -182,8 +193,8 @@ All the dependencies are tracked, that is:
    recompiled / modified / updated will be updated as well
 
 Note that inter-class dependencies are tracked only if the `jdeps`
-utility is available.
-If it cannot be found (or if it was explicitly disabled), then the Java
+utility is available and enabled.
+If it cannot be found or if it was explicitly disabled, then the Java
 source files will be all recompiled every time just only one of them
 requires recompilation -- that is, if none of them were modified, no
 source files will be recompiled at all.
@@ -269,7 +280,7 @@ directory of the Java source code tree (`SOURCES_PATH`), the name of
 file containing inter-class dependencies (`JAVA_DEPENDENCIES`), etc.
 
 For example, the sample project stores the Java source files in the
-`src/main/java` subdirectory under each component's base directory.
+`src` subdirectory under each component's base directory.
 To use another subdirectory, redefine the `SOURCES_PATH` variable.
 
 "Components' build.mk files" contains a list of included `build.mk`
@@ -311,21 +322,21 @@ The Standard targets are:
   `clean` target as simple as a single `rm -rf`
 * `distclean`: same as `clean` but will also remove any file built by
   `configure`
-* `check`: will run a test suite
+* `check`: will run all the test suites -- if you only want to run a
+  specific test suite, use the `check-<componentname>` target
 * `installcheck`: should run a test suite against the installed files,
   but given that nothing is installed, it is just an alias for `check`
 * `dist`: it will build a TAR package containing the source code and all
   the file needed to build from source
 * `doc`: this is not a Standard target, but I added it to build some
-  documentation
+  documentation in the Javadoc style
 
-> **NOTE**: the `check`, `dist` and `doc` targets are still work in
-> progress.
+> **NOTE**: the `dist` and `doc` targets are still work in progress.
 
 ### The build.mk ###
 The `Makefile.in` deals with global properties of the project, whereas
 the `build.mk` deals with the properties of a single component, i.e., a
-JAR archive or a native library.
+JAR archive, a test suite or a native library.
 
 A `build.mk` should contain a single macro invocation:
 
@@ -333,7 +344,13 @@ A `build.mk` should contain a single macro invocation:
 $(eval $(call BUILD_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_RESOURCES),$(MK_INCLUDED_JARS),$(MK_ADDITIONAL_CLASSES)))
 ```
 
-in case of a JAR archive, or:
+in case of a JAR archive:
+
+```
+$(eval $(call BUILD_TEST_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_RESOURCES),$(MK_RUNTIME_DEPENDENCIES),$(MK_MAIN_CLASS)))
+```
+
+in case of a test suite, or:
 
 ```
 $(eval $(call BUILD_NATIVE_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_CFLAGS),$(MK_LDFLAGS),$(MK_JAVAH_CLASSES),$(MK_EXTERNAL_OBJECTS)))
@@ -358,6 +375,11 @@ The arguments to the macros define properties of the component, namely:
 * `MK_ADDITIONAL_CLASSES` lists the names (in the
   package.subpackage.classname format) of classes, defined in other
   components, to be included in this component's JAR archive
+* `MK_RUNTIME_DEPENDENCIES` lists the names of the components the test
+  suite depends on -- at least the tested component should be listed
+* `MK_MAIN_CLASS` is the name of the class to invoke to run the test
+  suite -- it must define the `public static void main(String[])` method
+  and require no arguments
 * `MK_CFLAGS` specifies options to be passed to the C compiler
 * `MK_LDFLAGS` specifies options to be passed to the native linker
 * `MK_JAVAH_CLASSES` specifies a list of Java classes whose interfaces
@@ -374,7 +396,7 @@ if empty, the JAR archive will be named `<name>.jar` and the native
 library `<name>.so`, else they will be named `<name>-<version>.jar`
 and `<name>-<version>.so`.
 
-The class names listed in the `MK_JAVAH_CLASSES` argument should be
+The class names listed in the `MK_JAVAH_CLASSES` argument must be
 specified in the "dot notation", i.e., `some.package.name.SomeClass`.
 
 File names specified in `MK_SOURCES` and `MK_RESOURCES` must be relative
@@ -458,22 +480,23 @@ include the components' `build.mk` files in some specific order --
 `make` will figure out the dependencies between the involved components
 irrespective of the order of inclusion of the `build.mk` files.
 
-Both the `BUILD_MAKE_RULES` and the `BUILD_NATIVE_MAKE_RULES` macros
-define several targets bound together into dependency trees whose roots
-are, respectively, the JAR archive and the native library of the
+The `BUILD_MAKE_RULES`, `BUILD_TEST_MAKE_RULES` and
+`BUILD_NATIVE_MAKE_RULES` macros define several targets bound together
+into dependency trees whose roots are, respectively, the JAR archive,
+the test suite (another JAR archive) and the native library of the
 component.
 
 Those root targets are not build automatically but must be explicitly
-invoked or included as prerequisite in another target, e.g., the
+invoked or included as prerequisite in other targets, e.g., the
 package(s) target(s) (see previous section).
 This is the purpose of the third "library variable" -- it is much easier
 to add `<libname>.buildname` among the prerequisites rather than
 building the external Java library, JAR archive or native library name
 yourself.
 
-Also note that the "library variables" as well as the `resources.jars`
-and `package.version` variables are automatically added to
-`RESOURCE_PLACEHOLDERS`.
+Also note that the first and last "library variables" as well as the
+`resources.jars`, `resources.libs`, `package.name` and `package.version`
+variables are automatically added to `RESOURCE_PLACEHOLDERS`.
 Any other variable you may want to be expanded during filtering must be
 explicitly added to `RESOURCE_PLACEHOLDERS`.
 

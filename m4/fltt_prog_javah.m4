@@ -26,8 +26,6 @@ AC_DEFUN([FLTT_PROG_JAVAH],
 AC_REQUIRE([AC_PROG_SED])[]dnl
 AC_REQUIRE([FLTT_PROG_JAVAC])[]dnl
 AC_ARG_VAR([JAVA_PREFIX], [path to the Java home directory])[]dnl
-AC_LANG_COMPILER(C)[]dnl This is a trick to avoid the "Expanded Before
-dnl                      Required" warning message.
 m4_define([fltt_javah_test],
           [AS_IF([test ! -f Conftest.class],
                  [AS_IF([test "x$JAVAC" = x],
