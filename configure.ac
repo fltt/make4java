@@ -13,7 +13,7 @@ dnl If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 dnl
 AC_PREREQ([2.62])
 AC_INIT([FooBar Sample Application], [1.1.0], [franz.lattanzio@gmail.com], [foobar])
-AC_CONFIG_SRCDIR([bar/build.mk])
+AC_CONFIG_SRCDIR([bar/java/build.mk])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 dnl *** Check options (first) ***

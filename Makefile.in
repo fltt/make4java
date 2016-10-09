@@ -102,13 +102,13 @@ resources.libs := libs
 
 
 # Component-relative path to Java source files
-SOURCES_PATH := src/main/java
+SOURCES_PATH := src
 
 # Component-relative path to resource files
-RESOURCES_PATH := src/main/resources
+RESOURCES_PATH := resources
 
 # Component-relative path to native C source files
-NATIVE_SOURCES_PATH := src/main/native
+NATIVE_SOURCES_PATH := src
 
 
 # The name of a subdirectory of the topmost directory that holds all
@@ -437,7 +437,7 @@ $$(foreach var,$(5),$$(eval $$(call RESOURCES_TO_JAR,$(3),$(1),$$(var)): $$(var)
 $$(value $(1).buildname): $$(call SOURCES_TO_CLASSES,$(3),$(4)) \
                           $$(call CLASSNAME_TO_CLASSFILE,$(7)) \
                           $$(call RESOURCES_TO_JAR,$(3),$(1),$(5)) \
-                          $$(foreach var,$(6),$$(addprefix $(BUILD_DIR)/,$$(value $$(var).jarname))) | $(JARS_DIR)
+                          $$(foreach var,$(6),$$(value $$(var).buildname)) | $(JARS_DIR)
 	if test -f '$$@'; then cmd=u; else cmd=c; fi && \
 	$(JAR) $$$${cmd}vf '$$@' \
 	  $$(addprefix -C $(CLASSES_DIR) ,$$(patsubst $(CLASSES_DIR)/%,'%',$$(filter $(CLASSES_DIR)/%,$$?) \
@@ -759,7 +759,7 @@ $(JAVAH_CLASSES_LIST): | $(INCLUDE_DIR)
 # bar's.
 
 include @top_srcdir@/foo/java/build.mk
-include @top_srcdir@/bar/build.mk
+include @top_srcdir@/bar/java/build.mk
 
 # Specifying optional components is as simple as adding a single
 # conditional
@@ -867,7 +867,7 @@ $(STAGE_DIR)/%:
 	ln $(patsubst %,'%',$^) '$@'
 
 # *.sh files are treated specially: they are both filtered as resources
-# are and made executable
+# and made executable
 $(STAGE_DIR)/%.sh: | $(RESOURCES_FILTER_SCRIPT)
 	$(SED) -f '$(RESOURCES_FILTER_SCRIPT)' '$<' >'$@' && \
 	chmod a+x '$@'
