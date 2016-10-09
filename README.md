@@ -330,13 +330,13 @@ JAR archive or a native library.
 A `build.mk` should contain a single macro invocation:
 
 ```
-$(eval $(call BUILD_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_RESOURCES),$(MK_INCLUDED_JARS)))
+$(eval $(call BUILD_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_RESOURCES),$(MK_INCLUDED_JARS),$(MK_ADDITIONAL_CLASSES)))
 ```
 
 in case of a JAR archive, or:
 
 ```
-$(eval $(call BUILD_NATIVE_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_CFLAGS),$(MK_LDFLAGS),$(MK_JAVAH_CLASSES)))
+$(eval $(call BUILD_NATIVE_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_CFLAGS),$(MK_LDFLAGS),$(MK_JAVAH_CLASSES),$(MK_EXTERNAL_OBJECTS)))
 ```
 
 in case of a native library.
@@ -355,10 +355,17 @@ The arguments to the macros define properties of the component, namely:
 * `MK_INCLUDED_JARS` lists the names of the components whose JAR
   archive or native library have to be included in this component's JAR
   archive
+* `MK_ADDITIONAL_CLASSES` lists the names (in the
+  package.subpackage.classname format) of classes, defined in other
+  components, to be included in this component's JAR archive
 * `MK_CFLAGS` specifies options to be passed to the C compiler
 * `MK_LDFLAGS` specifies options to be passed to the native linker
 * `MK_JAVAH_CLASSES` specifies a list of Java classes whose interfaces
   have to be exported as JNI C include files
+* `MK_EXTERNAL_OBJECTS` lists the names (in the
+  native-library-name/object-file-name.o format) of object files,
+  defined in other native components, to be included in this component's
+  native library
 
 The values specified for `MK_NAME` and `MK_VERSION` are used to build
 the name of the JAR archive / native library.
@@ -432,6 +439,24 @@ If `make` fails with error "*** Missing included component(s): foo.
 Stop.", then you have misspelled `foo`'s name, forgot to include `foo`'s
 `build.mk` in your `Makefile.in` or included it *after* a component that
 lists `foo` in its `MK_INCLUDED_JARS` argument.
+
+`MK_ADDITIONAL_CLASSES` and `MK_EXTERNAL_OBJECTS` are finer grained
+versions of `MK_INCLUDED_JARS` which allow to include single class or
+object files.
+These are useful when your project contains components meant to be used
+in different environments (e.g., client and server sides).
+In many cases they will share a number of common classes but you can't
+(nor wouldn't) duplicate the source files in every component sharing
+them.
+The solution is to include the source files in one component and then
+use `MK_ADDITIONAL_CLASSES` and `MK_EXTERNAL_OBJECTS` to share them with
+all the other components.
+
+Moreover, contrary to `MK_INCLUDED_JARS`, when using
+`MK_ADDITIONAL_CLASSES` and `MK_EXTERNAL_OBJECTS` you don't have to
+include the components' `build.mk` files in some specific order --
+`make` will figure out the dependencies between the involved components
+irrespective of the order of inclusion of the `build.mk` files.
 
 Both the `BUILD_MAKE_RULES` and the `BUILD_NATIVE_MAKE_RULES` macros
 define several targets bound together into dependency trees whose roots

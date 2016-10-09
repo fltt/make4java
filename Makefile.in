@@ -397,8 +397,10 @@ CLASSNAME_TO_CLASSFILE = $(patsubst %,$(CLASSES_DIR)/%.class,$(subst .,/,$(1)))
 #   $(3) - component base directory (must end with '/')
 #   $(4) - Java source files list
 #   $(5) - resource files list
-#   $(6) - JARs and/or native libraries to be included in this
-#          component's JAR archive
+#   $(6) - JARs and/or native libraries to be included in
+#          this component's JAR archive
+#   $(7) - additional classes (from other components, in
+#          the package.subpackage.classname format)
 define BUILD_MAKE_RULES =
 
 ifeq ($(1),)
@@ -433,6 +435,7 @@ compile: $$(call SOURCES_TO_CLASSES,$(3),$(4))
 $$(foreach var,$(5),$$(eval $$(call RESOURCES_TO_JAR,$(3),$(1),$$(var)): $$(var)))
 
 $$(value $(1).buildname): $$(call SOURCES_TO_CLASSES,$(3),$(4)) \
+                          $$(call CLASSNAME_TO_CLASSFILE,$(7)) \
                           $$(call RESOURCES_TO_JAR,$(3),$(1),$(5)) \
                           $$(foreach var,$(6),$$(addprefix $(BUILD_DIR)/,$$(value $$(var).jarname))) | $(JARS_DIR)
 	if test -f '$$@'; then cmd=u; else cmd=c; fi && \
@@ -440,8 +443,8 @@ $$(value $(1).buildname): $$(call SOURCES_TO_CLASSES,$(3),$(4)) \
 	  $$(addprefix -C $(CLASSES_DIR) ,$$(patsubst $(CLASSES_DIR)/%,'%',$$(filter $(CLASSES_DIR)/%,$$?) \
 	                                                                   $$(wildcard $$(patsubst %.class,%$$$$*.class,$$(filter $(CLASSES_DIR)/%,$$?))))) \
 	  $$(addprefix -C $(RESOURCES_DIR)/$(1) ,$$(patsubst $(RESOURCES_DIR)/$(1)/%,'%',$$(filter $(RESOURCES_DIR)/%,$$?))) \
-	  $$(addprefix -C $(BUILD_DIR) ,$$(patsubst $(BUILD_DIR)/%,'%',$$(filter $(JARS_DIR)/%,$$?))) \
-	  $$(addprefix -C $(BUILD_DIR) ,$$(patsubst $(BUILD_DIR)/%,'%',$$(filter $(NATIVE_DIR)/%,$$?)))
+	  $$(addprefix -C $(BUILD_DIR) ,$$(patsubst $(BUILD_DIR)/%,'%',$$(filter $(JARS_DIR)/%,$$?) \
+	                                                               $$(filter $(NATIVE_DIR)/%,$$?)))
 
 endef # BUILD_MAKE_RULES
 
@@ -692,6 +695,8 @@ endef # BUILD_NATIVE_COMPILE_RULES
 #   $(5) - C compiler flags (CFLAGS)
 #   $(6) - linker flags (LDFLAGS)
 #   $(7) - javah classes (in the package.subpackage.classname format)
+#   $(8) - additional object files (from other components, in
+#          the native-library-name/object-file-name.o format)
 define BUILD_NATIVE_MAKE_RULES =
 
 ifeq ($(1),)
@@ -722,7 +727,7 @@ $$(call CLASSNAME_TO_FULL_INCLUDEFILE,$(7)): $(JAVAH_CLASSES_LIST);
 
 $$(foreach var,$(4),$$(eval $$(call BUILD_NATIVE_COMPILE_RULES,$(1),$(3),$(5),$$(var))))
 
-$$(value $(1).buildname): $$(call SOURCES_TO_OBJECTS,$(1),$(3),$(4)) | $(NATIVE_DIR)
+$$(value $(1).buildname): $$(call SOURCES_TO_OBJECTS,$(1),$(3),$(4)) $$(patsubst %,$(OBJECTS_DIR)/%,$(8)) | $(NATIVE_DIR)
 	$(CC) $(CFLAGS) $(5) $(LDFLAGS) $(6) -Wl,--no-undefined -o '$$@' $$(patsubst %,'%',$$^) $(LIBS)
 
 endef # BUILD_NATIVE_MAKE_RULES
