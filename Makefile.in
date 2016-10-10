@@ -63,8 +63,13 @@ MAKE_ALIAS = @LN_S@
 MKDIR_P = @MKDIR_P@
 # RM = rm -f # this variable is predefined by make
 SED = @SED@
-TAR = @TAR@
+TAR = @am__tar@
 XARGS = @XARGS@
+
+# The followings expand, respectively, to the gzip command and '.gz',
+# if gzip is available, or to 'cat' and the empty string if not
+COMPRESS = @COMPRESS@
+COMPRESS_EXT = @COMPRESS_EXT@
 
 # Native code support -- if defined, the values of the CPPFLAGS and
 # CFLAGS variables will be passed to the C compiler to compile the C
@@ -178,8 +183,9 @@ NATIVE_DIR := $(BUILD_DIR)/$(resources.libs)
 
 
 # The name of the directory that will hold all the files to be put into
-# the package TAR archive
-STAGE_DIR := $(BUILD_DIR)/stage
+# the package TAR archive -- the last path element will appear in the
+# TAR archive's root directory
+STAGE_DIR := $(BUILD_DIR)/$(PACKAGE_NAME)-$(package.version)
 
 # The name of the directory that will hold all the packages built (for
 # this sample Makefile there will be only one package)
@@ -945,15 +951,16 @@ $(eval $(call ADD_PACKAGE_RULES,$(BAR_JAR_BUILD_LIST),PACKAGE_STAGE_LIST,/lib))
 $(eval $(call ADD_PACKAGE_RULES,$(FOO_NATIVE_BUILD_LIST),PACKAGE_STAGE_LIST,/native))
 
 
-$(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version).tar.gz: $(PACKAGE_STAGE_LIST) | $(PACKAGE_DIR)
+$(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version).tar$(COMPRESS_EXT): $(PACKAGE_STAGE_LIST) | $(PACKAGE_DIR)
 	$(RM) '$@' && \
 	dir=$$(pwd) && \
-	cd '$(STAGE_DIR)' && \
-	$(TAR) cvzf "$$dir/$@" $(patsubst $(STAGE_DIR)/%,'%',$^)
+	cd '$(STAGE_DIR)' && cd .. && \
+	tardir="$(PACKAGE_NAME)-$(package.version)" && \
+	$(TAR) | $(COMPRESS) >"$$dir/$@"
 
 .PHONY: package
 
-package: $(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version).tar.gz
+package: $(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version).tar$(COMPRESS_EXT)
 
 
 ####################

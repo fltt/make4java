@@ -296,8 +296,9 @@ For the structure of a package may be quite complex, I chose to dedicate
 it a specific section of `Makefile.in`.
 
 For the sake of illustration, the sample `Makefile.in` contains
-instructions to build a `.tar.gz` archive containing some of the
-project's components, a README and a script to start the application.
+instructions to build a `.tar.gz` archive (if the `gzip` utility is
+available, or a plain `.tar` if not) containing some of the project's
+components, a README and a script to start the application.
 You may adapt it to your needs or write your own instructions from
 scratch, but, whichever path you decide to take, keep in mind that to
 add dependencies between the packaging targets and the projects'

@@ -53,9 +53,16 @@ AC_CHECK_PROGS([FIND], [find])
 AC_ARG_VAR([FIND], [find command])dnl
 AS_IF([test "x$FIND" = x],
       [missing_programs="$missing_programs find"])
-dnl Won't build the tar package if not found, see below.
-AC_CHECK_PROGS([TAR], [tar], [true])
+_AM_PROG_TAR([v7])
 AC_ARG_VAR([TAR], [tar command])dnl
+AC_CHECK_PROGS([GZIP], [gzip])
+AC_ARG_VAR([GZIP], [gzip command])dnl
+AC_ARG_VAR([GZIP_OPTIONS], [gzip compression options, default is '--best'])dnl
+AS_IF([test "x$GZIP" = x],
+      [AC_SUBST([COMPRESS], [cat])
+       AC_SUBST([COMPRESS_EXT], [])],
+      [AC_SUBST([COMPRESS], ["$GZIP \$\${GZIP_OPTIONS---best} -c"])
+       AC_SUBST([COMPRESS_EXT], [.gz])])
 FLTT_PROG_JAVAC
 AS_IF([test "x$JAVAC" = x],
       [missing_programs="$missing_programs javac"])
@@ -122,7 +129,7 @@ AS_IF([test "x$missing_programs" != x],
       [AC_MSG_ERROR([the following program(s) couldn't be found:$missing_programs])])
 AS_IF([test "x$missing_jdeps_programs" != x],
       [AC_MSG_WARN([incremental compilation is disabled for the following program(s) couldn't be found:$missing_jdeps_programs])])
-AS_IF([test "x$TAR" = xtrue],
+AS_IF([test "x$TAR" = xfalse],
       [AC_MSG_WARN([could not find the tar utility, the tar package won't be built])])
 AC_CONFIG_FILES([Makefile])
 AC_CONFIG_HEADERS([config.h])
