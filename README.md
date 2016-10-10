@@ -14,9 +14,9 @@ required to compile them.
 
 How?
 ----
-**make4java** is not a new tool you have to learn to use, but it is a
-new way to use GNU Make to manage Java projects -- with particular
-emphasis on big ones -- effectively.
+**make4java** is not a new tool you have to learn to use, but new way to
+use GNU Make to manage Java projects -- with particular emphasis on big
+ones -- effectively.
 
 A project employing the **make4java** approach will be made of:
 
