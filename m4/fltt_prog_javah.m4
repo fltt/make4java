@@ -24,6 +24,7 @@
 AC_DEFUN([FLTT_PROG_JAVAH],
          [AC_REQUIRE([AC_CANONICAL_BUILD])[]dnl
 AC_REQUIRE([AC_PROG_SED])[]dnl
+AC_REQUIRE([FLTT_PROG_JAVA])[]dnl
 AC_REQUIRE([FLTT_PROG_JAVAC])[]dnl
 AC_ARG_VAR([JAVA_PREFIX], [path to the Java home directory])[]dnl
 m4_define([fltt_javah_test],
@@ -31,11 +32,11 @@ m4_define([fltt_javah_test],
                  [AS_IF([test "x$JAVAC" = x],
                         [AS_ECHO(["$as_me: javah test failed:"]) >&AS_MESSAGE_LOG_FD
 AS_ECHO(["  cannot proceed without a working Java compiler"]) >&AS_MESSAGE_LOG_FD],
-                        [cat >Conftest.java <<EOF
+                        [[cat >Conftest.java <<EOF
 public class Conftest {
     public native int somefun(int n);
 }
-EOF
+EOF]
 AS_IF([$JAVAC Conftest.java >/dev/null 2>&1 &&
        test -f Conftest.class], [],
       [AS_ECHO(["$as_me: failed program was:"]) >&AS_MESSAGE_LOG_FD
@@ -75,12 +76,28 @@ AS_IF([test "x$JAVAH" = x],
       [AS_ECHO(["$as_me: cannot locate jni.h:"]) >&AS_MESSAGE_LOG_FD
 AS_ECHO(["  proceeding without a working Java C header generator is pointless"]) >&AS_MESSAGE_LOG_FD],
       [fltt_save_CPPFLAGS=$CPPFLAGS
-fltt_javahome=`$JAVAH -J-XshowSettings:properties -help 2>&1 | $SED -n 's|^ *java\.home *= *\(.*\)/@<:@^/@:>@*/\{0,1\}$|\1|p'`
+dnl If there is a working javah then there is also a working javac
+AS_IF([test "x$JAVA" = x],
+      [AS_ECHO(["$as_me: javah test failed:"]) >&AS_MESSAGE_LOG_FD
+AS_ECHO(["  cannot proceed without a working Java application launcher"]) >&AS_MESSAGE_LOG_FD],
+      [[cat >Conftest.java <<EOF
+public class Conftest {
+    public static void main(String[] arg) {
+        System.out.println("java.home = " + System.getProperty("java.home"));
+    }
+}
+EOF]
+AS_IF([$JAVAC Conftest.java >/dev/null 2>&1 &&
+       test -f Conftest.class],
+      [fltt_javahome=`$JAVA Conftest | $SED -n 's|^java\.home = \(.*\)/@<:@^/@:>@*/\{0,1\}$|\1|p'`
 AS_IF([test "x$fltt_javahome" != x && test -d "$fltt_javahome/include"],
       [CPPFLAGS="$fltt_save_CPPFLAGS -I$fltt_javahome/include -I$fltt_javahome/include/$fltt_os"
 AC_COMPILE_IFELSE([AC_LANG_SOURCE([@%:@include <jni.h>])],
                   [fltt_cv_path_JNI_H=$fltt_javahome/include],
-                  [AS_ECHO(["$as_me: could not find (a working) jni.h, have looked in: $fltt_javahome/include"]) >&AS_MESSAGE_LOG_FD])])
+                  [AS_ECHO(["$as_me: could not find (a working) jni.h, have looked in: $fltt_javahome/include"]) >&AS_MESSAGE_LOG_FD])])],
+      [AS_ECHO(["$as_me: failed program was:"]) >&AS_MESSAGE_LOG_FD
+$SED 's/^/| /' Conftest.java >&AS_MESSAGE_LOG_FD])
+rm -f Conftest.java Conftest.class])
 AS_IF([test "x$fltt_cv_path_JNI_H" = xno && test "x$JAVA_PREFIX" != x &&
        test "$fltt_javahome/include" != "$JAVA_PREFIX/include" &&
        test -d "$JAVA_PREFIX/include"],

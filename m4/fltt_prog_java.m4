@@ -25,19 +25,19 @@ m4_define([fltt_java_test],
                  [AS_IF([test "x$JAVAC" = x],
                         [AS_ECHO(["$as_me: java test failed:"]) >&AS_MESSAGE_LOG_FD
 AS_ECHO(["  cannot proceed without a working Java compiler"]) >&AS_MESSAGE_LOG_FD],
-                        [cat >Conftest.java <<EOF
+                        [[cat >Conftest.java <<EOF
 public class Conftest {
     public static void main(String[] args) {
         System.out.println("It works");
     }
 }
-EOF
+EOF]
 AS_IF([$JAVAC Conftest.java >/dev/null 2>&1 && test -f Conftest.class], [],
       [AS_ECHO(["$as_me: failed programs were:"]) >&AS_MESSAGE_LOG_FD
 $SED 's/^/| /' Conftest.java >&AS_MESSAGE_LOG_FD])])])
 AS_IF([test -f Conftest.class],
       [fltt_javaout=`$ac_path_JAVA Conftest 2>/dev/null`
-AS_IF([test "x$fltt_javaout" != "xIt works"],
+AS_IF([test "x$fltt_javaout" = "xIt works"],
        [ac_cv_path_JAVA=$ac_path_JAVA ac_path_JAVA_found=:],
        [AS_ECHO(["$as_me: java test failed:"]) >&AS_MESSAGE_LOG_FD
 $SED 's/^/| /' Conftest.java >&AS_MESSAGE_LOG_FD])])])dnl

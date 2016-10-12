@@ -19,9 +19,9 @@
 AC_DEFUN([FLTT_PROG_JAR],
          [AC_ARG_VAR([JAVA_PREFIX], [path to the Java home directory])[]dnl
 m4_define([fltt_jar_test],
-          [cat >conftest.txt <<EOF
+          [[cat >conftest.txt <<EOF
 Some random text.
-EOF
+EOF]
 AS_IF([$ac_path_JAR cf conftest.jar conftest.txt >/dev/null 2>&1 &&
        test -f conftest.jar],
       [ac_cv_path_JAR=$ac_path_JAR ac_path_JAR_found=:])

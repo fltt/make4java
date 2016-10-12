@@ -21,10 +21,10 @@ AC_DEFUN([FLTT_PROG_JAVAC],
 AC_ARG_VAR([JAVA_PREFIX], [path to the Java home directory])[]dnl
 m4_define([fltt_compilers_list], [javac jikes guavac "gcj -C"])dnl
 m4_define([fltt_javac_test],
-          [cat >Conftest.java <<EOF
+          [[cat >Conftest.java <<EOF
 public class Conftest {
 }
-EOF
+EOF]
 AS_IF([$ac_path_JAVAC Conftest.java >/dev/null 2>&1 &&
        test -f Conftest.class],
       [ac_cv_path_JAVAC=$ac_path_JAVAC ac_path_JAVAC_found=:],

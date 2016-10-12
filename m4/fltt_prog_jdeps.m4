@@ -25,7 +25,7 @@ m4_define([fltt_jdeps_test],
                  [AS_IF([test "x$JAVAC" = x],
                         [AS_ECHO(["$as_me: jdeps test failed:"]) >&AS_MESSAGE_LOG_FD
 AS_ECHO(["  cannot proceed without a working Java compiler"]) >&AS_MESSAGE_LOG_FD],
-                        [cat >Conftest1.java <<EOF
+                        [[cat >Conftest1.java <<EOF
 public class Conftest1 {
     private int v1 = 1;
     public int value() {
@@ -40,7 +40,7 @@ public class Conftest2 extends Conftest1 {
         return v2;
     }
 }
-EOF
+EOF]
 AS_IF([$JAVAC Conftest1.java Conftest2.java >/dev/null 2>&1 &&
        test -f Conftest1.class && test -f Conftest2.class], [],
       [AS_ECHO(["$as_me: failed programs were:"]) >&AS_MESSAGE_LOG_FD
