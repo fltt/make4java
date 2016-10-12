@@ -258,7 +258,7 @@ into the following parts:
 6. Native components
 7. Components' build.mk files
 8. Packaging
-9. Standard targets
+9. More targets
 
 However, the parts you may need to tweak are:
 
@@ -266,7 +266,7 @@ However, the parts you may need to tweak are:
 2. Project properties and structure
 3. Components' build.mk files
 4. Packaging
-5. Standard targets
+5. More targets
 
 "Tools" fill up a number of Make variables with the corresponding
 variables defined in `configure.ac`.
@@ -305,17 +305,32 @@ add dependencies between the packaging targets and the projects'
 components add as many `$(<componentname>.buildname)` as required to the
 target's prerequisites (more on this in the next section).
 
-Lastly, "Standard targets" contains the targets -- plus `doc` -- any GNU
-Build System compliant `Makefile` must support.
-I chose them just to give `Makefile.in` some resemblance to Automake
-produced `Makefile`s, but you can really use whatever targets you want.
+The sample `Makefile.in` define a several target, most of which are for
+internal use and are not meant to be invoked directly from the command
+line, except for the following ones:
 
-The Standard targets are:
+* `compile`: will compile all the Java classes and native object files
+* `check-<componentname>`: will run the test suite of the specified
+  component
+* `components`: will build all the components' JAR archives and native
+  libraries
+* `package`: will build all the packages defined in the "Packaging"
+  section of the `Makefile.in`
+
+"More targets" is intended to add more targets to the ones described
+above.
+The provided `Makefile.in` defines the "standard targets" any GNU Build
+System compliant `Makefile` must support.
+I chose them just to give `Makefile.in` some resemblance to Automake
+produced `Makefile`s, but you can really define whatever targets you
+want.
+
+The standard targets are:
 
 * `all` (also the default target): it will just build the package(s), in
-  fact, it is just an alias for the package(s) target(s)
+  fact, it is just an alias for the package target
 * `install` and `install-strip`: for there's nothing to install they are
-  just more aliases for the package(s) target(s)
+  just more aliases for the package target
 * `uninstall`: this target will do nothing, for nothing is installed
 * `clean`: will remove any file built by `make` -- to keep things as
   simple as possible, the sample project stores all the generated files
@@ -324,13 +339,13 @@ The Standard targets are:
 * `distclean`: same as `clean` but will also remove any file built by
   `configure`
 * `check`: will run all the test suites -- if you only want to run a
-  specific test suite, use the `check-<componentname>` target
+  specific test suite, use the `check-<componentname>` target instead
 * `installcheck`: should run a test suite against the installed files,
   but given that nothing is installed, it is just an alias for `check`
 * `dist`: it will build a TAR package containing the source code and all
   the file needed to build from source
-* `doc`: this is not a Standard target, but I added it to build some
-  documentation in the Javadoc style
+* `doc`: this is not a standard target, but I added it to build some
+  Javadoc-style documentation
 
 > **NOTE**: the `dist` and `doc` targets are still work in progress.
 
@@ -426,22 +441,23 @@ variables".
 For each external Java library, JAR archive or native library, the
 following four "library variables" are defined:
 
-* `<libname>.version`, containing the version number of the library
-* `<libname>.basename`, containing the file name of the library,
+* `<componentname>.version`, containing the version number of the
+  library
+* `<componentname>.basename`, containing the file name of the library,
   stripped of the path
-* `<libname>.buildname`, containing the file name of the library,
+* `<componentname>.buildname`, containing the file name of the library,
   including the relative path from the project's topmost directory
-* `<libname>.jarname`, containing the file name of the library,
+* `<componentname>.jarname`, containing the file name of the library,
   including the relative path from the JAR's root directory
 
-Here `<libname>` is either the external Java library file name stripped
-of the file extension and version number or the name of the component as
-specified in the `MK_NAME` argument.
+Here `<componentname>` is either the external Java library file name
+stripped of the file extension and version number or the name of the
+component as specified in the `MK_NAME` argument.
 
 The last variable is meant to be used to reference included libraries
 from inside JAR archives.
-`<libname>` must be specified in the `MK_INCLUDED_JARS` argument of the
-including component.
+`<componentname>` must be specified in the `MK_INCLUDED_JARS` argument
+of the including component.
 
 For example, in the sample project the `bar` component includes the
 `foo` component, that is, `bar`'s `build.mk` defines `MK_INCLUDED_JARS
@@ -491,7 +507,7 @@ Those root targets are not build automatically but must be explicitly
 invoked or included as prerequisite in other targets, e.g., the
 package(s) target(s) (see previous section).
 This is the purpose of the third "library variable" -- it is much easier
-to add `<libname>.buildname` among the prerequisites rather than
+to add `<componentname>.buildname` among the prerequisites rather than
 building the external Java library, JAR archive or native library name
 yourself.
 
