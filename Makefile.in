@@ -90,8 +90,8 @@ LIBS = @LIBS@
 # Name of the package
 package.name := @PACKAGE_NAME@
 
-# This and the next variable are used to build the name of the package
-# TAR archive
+# This and the next variable are used to build the name of the source
+# and binary TAR archives
 PACKAGE_NAME := @PACKAGE_TARNAME@
 
 # Version number of the package (each component has its own version
@@ -182,13 +182,17 @@ INCLUDE_DIR := $(BUILD_DIR)/include
 NATIVE_DIR := $(BUILD_DIR)/$(resources.libs)
 
 
+# The name of the single top level directory that will contain all
+# the files and directory of the source and binary TAR archives
+TAR_ROOT_DIR := $(PACKAGE_NAME)-$(package.version)
+
 # The name of the directory that will hold all the files to be put into
-# the package TAR archive -- the last path element will appear in the
-# TAR archive's root directory
-STAGE_DIR := $(BUILD_DIR)/$(PACKAGE_NAME)-$(package.version)
+# the binary TAR archive
+STAGE_DIR := $(BUILD_DIR)/stage
 
 # The name of the directory that will hold all the packages built (for
-# this sample Makefile there will be only one package)
+# this sample Makefile there will be only a binary packages and a source
+# package)
 PACKAGE_DIR := packages
 
 # This is a list of targets that must not trigger automatic (re)build
@@ -870,16 +874,16 @@ components: $(JAR_ARCHIVES) $(NATIVE_LIBRARIES)
 #############
 
 # This section contains rules to collect the JARs and native libraries
-# into a package.
+# into a binary TAR archive.
 # This is just an example -- you can (and should) customize them to your
 # taste, e.g., collecting them into multiple packages or maybe just
 # moving the JARs into some predefined directory.
 
 
-# The following variables are used to list the files that will build the
-# package -- we need one variable for each directory inside the package
-# (there's no need for the directory structure inside the package to
-# match project's)
+# The following variables are used to list the files that will be put in
+# the TAR archive -- we need one variable for each directory inside the
+# package (there's no need for the directory structure inside the
+# package to match the project's)
 
 BAR_BIN_BUILD_LIST := bin/run.sh
 
@@ -900,18 +904,19 @@ endif
 # Arguments:
 #   $(1) - stage subdirectory (must begin with '/' or be empty)
 #   $(2) - stage files
-INTO_STAGE = $(addprefix $(STAGE_DIR)$(1)/,$(notdir $(2)))
+INTO_STAGE = $(addprefix $(STAGE_DIR)/$(TAR_ROOT_DIR)$(1)/,$(notdir $(2)))
 
 
 # Create rules to build stage subdirectories and define dependencies
 # between the stage files and their respective *_BUILD_LIST files.
 # All the stage file names are collected in a variable whose name is
 # specified in the second argument -- it will be used to define the
-# package's prerequisites.
-# The '$(STAGE_DIR)/%' and '$(STAGE_DIR)/%.sh' rules below will copy the
-# files into their place under the stage directory.
+# binary TAR archive's prerequisites.
+# The '$(STAGE_DIR)/$(TAR_ROOT_DIR)/%' and
+# '$(STAGE_DIR)/$(TAR_ROOT_DIR)/%.sh' rules below will copy the files
+# into their place under the stage directory.
 # NOTE: The intended use is to invoke this macro for each directory in
-#       the package and with the list of files to put in it.
+#       the TAR archive together with the list of files to be put in it.
 
 # Arguments:
 #   $(1) - build list files
@@ -921,28 +926,28 @@ define ADD_PACKAGE_RULES =
 
 $(2) += $$(call INTO_STAGE,$(3),$(1))
 
-$(STAGE_DIR)$(3):
+$(STAGE_DIR)/$(TAR_ROOT_DIR)$(3):
 	$(MKDIR_P) '$$@'
 
-$$(foreach var,$(1),$$(eval $$(call INTO_STAGE,$(3),$$(var)): $$(var) | $(STAGE_DIR)$(3)))
+$$(foreach var,$(1),$$(eval $$(call INTO_STAGE,$(3),$$(var)): $$(var) | $(STAGE_DIR)/$(TAR_ROOT_DIR)$(3)))
 
 endef # ADD_PACKAGE_RULES
 
 
 # Hard links are faster to build than copying files around
-$(STAGE_DIR)/%:
+$(STAGE_DIR)/$(TAR_ROOT_DIR)/%:
 	$(RM) '$@' && \
 	ln $(patsubst %,'%',$^) '$@'
 
 # *.sh files are treated specially: they are both filtered as resources
 # and made executable
-$(STAGE_DIR)/%.sh: | $(RESOURCES_FILTER_SCRIPT)
+$(STAGE_DIR)/$(TAR_ROOT_DIR)/%.sh: | $(RESOURCES_FILTER_SCRIPT)
 	$(SED) -f '$(RESOURCES_FILTER_SCRIPT)' '$<' >'$@' && \
 	chmod a+x '$@'
 
 
 # PACKAGE_STAGE_LIST will hold the list of the files that build up the
-# package -- it is used to specify the prerequisites of the package
+# TAR archive -- it is used to specify the prerequisites of the package
 PACKAGE_STAGE_LIST :=
 
 $(eval $(call ADD_PACKAGE_RULES,$(BAR_BIN_BUILD_LIST),PACKAGE_STAGE_LIST,/bin))
@@ -951,16 +956,16 @@ $(eval $(call ADD_PACKAGE_RULES,$(BAR_JAR_BUILD_LIST),PACKAGE_STAGE_LIST,/lib))
 $(eval $(call ADD_PACKAGE_RULES,$(FOO_NATIVE_BUILD_LIST),PACKAGE_STAGE_LIST,/native))
 
 
-$(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version).tar$(COMPRESS_EXT): $(PACKAGE_STAGE_LIST) | $(PACKAGE_DIR)
+$(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version)-bin.tar$(COMPRESS_EXT): $(PACKAGE_STAGE_LIST) | $(PACKAGE_DIR)
 	$(RM) '$@' && \
 	dir=$$(pwd) && \
-	cd '$(STAGE_DIR)' && cd .. && \
-	tardir="$(PACKAGE_NAME)-$(package.version)" && \
+	cd '$(STAGE_DIR)' && \
+	tardir="$(TAR_ROOT_DIR)" && \
 	$(TAR) | $(COMPRESS) >"$$dir/$@"
 
 .PHONY: package
 
-package: $(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version).tar$(COMPRESS_EXT)
+package: $(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version)-bin.tar$(COMPRESS_EXT)
 
 
 ####################
