@@ -85,6 +85,7 @@ dnl       just in case someday their definition is changed to AC_DEFUN
 dnl       or equivalent.
 AS_IF([test "x$enable_native" = xyes],
       [AC_CANONICAL_BUILD
+AC_CANONICAL_HOST
 AC_PROG_CC
 AC_PROG_CC_C_O
 AS_IF([eval test \$ac_cv_prog_cc_${ac_cc}_c_o != yes],
@@ -99,8 +100,8 @@ AC_LANG_COMPILER(C)
 FLTT_PROG_JAVAH
 AS_IF([test "x$JAVAH" = x],
       [missing_programs="$missing_programs javah"],
-      [AS_IF([test "x$JAVAH_CPPFLAGS" = x],
-             [AC_MSG_ERROR([could not find jni.h])])])
+      [AS_IF([test "x$fltt_cv_path_JAVAH_CPPFLAGS" = xno],
+             [AC_MSG_FAILURE([could not find a working "jni.h"])])])
 AC_CHECK_PROGS([XARGS], [xargs])
 AC_ARG_VAR([XARGS], [xargs command])dnl
 AS_IF([test "x$XARGS" = x],
