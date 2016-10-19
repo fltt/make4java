@@ -91,10 +91,6 @@ AC_PROG_CC_C_O
 AS_IF([eval test \$ac_cv_prog_cc_${ac_cc}_c_o != yes],
       [AC_MSG_ERROR([your C compiler doesn't accept -c and -o together])])
 AC_PROG_CPP
-dnl AC_PROG_GREP is AC_REQUIRE'd by AC_PROG_FGREP.
-AC_PROG_GREP
-AC_PROG_FGREP
-AC_ARG_VAR([FGREP], [fgrep command])dnl
 dnl AC_LANG_COMPILER is indirectly AC_REQUIRE'd by FLTT_PROG_JAVAH.
 AC_LANG_COMPILER(C)
 FLTT_PROG_JAVAH
