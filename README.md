@@ -246,6 +246,15 @@ For more information about Autoconf run:
 info autoconf
 ```
 
+> **NOTE**: It's a well known limit of the `Autotools` the inability to
+> manage pathnames containing whitespaces and "special characters" in
+> them (see the `Autoconf` info page for a complete list).
+> So, if your project files or your tools contain special characters in
+> their name, expect troubles.
+> A simple fix is to create symbolic links -- without special characters
+> in their pathnames -- to those files and/or tools and give `configure`
+> the names of the symbolic links.
+
 ### The Makefile.in ###
 For the sake of clarity and documentation, the `Makefile.in` was split
 into the following parts:
@@ -327,27 +336,27 @@ want.
 
 The standard targets are:
 
-* `all` (also the default target): it will just build the package(s), in
-  fact, it is just an alias for the package target
+* `all` (also the default target): builds the package(s), in fact, it is
+  just an alias for the package target
 * `install` and `install-strip`: for there's nothing to install they are
   just more aliases for the package target
 * `uninstall`: this target will do nothing, for nothing is installed
-* `clean`: will remove any file built by `make` -- to keep things as
-  simple as possible, the sample project stores all the generated files
-  in two directories, `$(BUILD_DIR)` and `$(PACKAGE_DIR)`, making the
-  `clean` target as simple as a single `rm -rf`
+* `clean`: removes any file built by `make` -- to keep things as simple
+  as possible, the sample project stores all the generated files in two
+  directories, `$(BUILD_DIR)` and `$(PACKAGE_DIR)`, making the `clean`
+  target as simple as a single `rm -rf`
 * `distclean`: same as `clean` but will also remove any file built by
   `configure`
-* `check`: will run all the test suites -- if you only want to run a
+* `check`: runs all the test suites -- if you only want to run a
   specific test suite, use the `check-<componentname>` target instead
 * `installcheck`: should run a test suite against the installed files,
   but given that nothing is installed, it is just an alias for `check`
-* `dist`: it will build a TAR package containing the source code and all
-  the file needed to build from source
+* `dist`: builds a TAR package containing the source code and all the
+  files needed to build from source
 * `doc`: this is not a standard target, but I added it to build some
   Javadoc-style documentation
 
-> **NOTE**: the `dist` and `doc` targets are still work in progress.
+> **NOTE**: the `doc` target is still work in progress.
 
 ### The build.mk ###
 The `Makefile.in` deals with global properties of the project, whereas
@@ -357,19 +366,19 @@ JAR archive, a test suite or a native library.
 A `build.mk` should contain a single macro invocation:
 
 ```
-$(eval $(call BUILD_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_RESOURCES),$(MK_INCLUDED_JARS),$(MK_ADDITIONAL_CLASSES)))
+$(eval $(call BUILD_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_ENABLED),$(MK_DIR),$(MK_SOURCES),$(MK_RESOURCES),$(MK_INCLUDED_JARS),$(MK_ADDITIONAL_CLASSES)))
 ```
 
 in case of a JAR archive:
 
 ```
-$(eval $(call BUILD_TEST_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_RESOURCES),$(MK_RUNTIME_DEPENDENCIES),$(MK_MAIN_CLASS)))
+$(eval $(call BUILD_TEST_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_ENABLED),$(MK_DIR),$(MK_SOURCES),$(MK_RESOURCES),$(MK_RUNTIME_DEPENDENCIES),$(MK_MAIN_CLASS)))
 ```
 
 in case of a test suite, or:
 
 ```
-$(eval $(call BUILD_NATIVE_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_DIR),$(MK_SOURCES),$(MK_CFLAGS),$(MK_LDFLAGS),$(MK_JAVAH_CLASSES),$(MK_EXTERNAL_OBJECTS)))
+$(eval $(call BUILD_NATIVE_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_ENABLED),$(MK_DIR),$(MK_SOURCES),$(MK_CFLAGS),$(MK_LDFLAGS),$(MK_JAVAH_CLASSES),$(MK_EXTERNAL_OBJECTS)))
 ```
 
 in case of a native library.
@@ -380,6 +389,7 @@ The arguments to the macros define properties of the component, namely:
 
 * `MK_NAME` is the name of the component
 * `MK_VERSION` is the version of the component -- can be empty
+* `MK_ENABLED` if set to 'yes' the component will be built
 * `MK_DIR` is the relative path to the component's subdirectory (the
   directory containing the `build.mk` file) from the project's topmost
   directory (the directory containing the `Makefile.in`)
@@ -411,6 +421,10 @@ The name is different depending on whether `MK_VERSION` is empty or not:
 if empty, the JAR archive will be named `<name>.jar` and the native
 library `<name>.so`, else they will be named `<name>-<version>.jar`
 and `<name>-<version>.so`.
+
+`MK_ENABLED` is used to control (from `configure`) which component to
+build and which to skip.
+If the component must be built unconditionally, just set it to 'yes'.
 
 The class names listed in the `MK_JAVAH_CLASSES` argument must be
 specified in the "dot notation", i.e., `some.package.name.SomeClass`.
