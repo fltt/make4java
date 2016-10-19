@@ -27,7 +27,7 @@ public class Conftest {
 EOF]
 AS_IF([$ac_path_JAVAC Conftest.java >/dev/null 2>&1 &&
        test -f Conftest.class],
-      [ac_cv_path_JAVAC=$ac_path_JAVAC ac_path_JAVAC_found=:],
+      [ac_cv_path_JAVAC="$ac_path_JAVAC" ac_path_JAVAC_found=:],
       [AS_ECHO(["$as_me: failed program was:"]) >&AS_MESSAGE_LOG_FD
 $SED 's/^/| /' Conftest.java >&AS_MESSAGE_LOG_FD])
 rm -f Conftest.java Conftest.class])dnl
@@ -44,11 +44,11 @@ AS_IF([test "x$JAVA_PREFIX" = x],
                                                    [fltt_compilers_list],
                                                    [fltt_javac_test],
                                                    [ac_cv_path_JAVAC=no],
-                                                   [$JAVA_PREFIX/bin])])])
+                                                   ["$JAVA_PREFIX/bin"])])])
 m4_undefine([fltt_javac_test])dnl
 m4_undefine([fltt_compilers_list])dnl
 AS_IF([test "x$ac_cv_path_JAVAC" != xno],
-      [JAVAC=$ac_cv_path_JAVAC])
+      [JAVAC="$ac_cv_path_JAVAC"])
 AC_SUBST([JAVAC])[]dnl
 AC_ARG_VAR([JAVAC], [Java programming language compiler])dnl
 ])# FLTT_PROG_JAVAC

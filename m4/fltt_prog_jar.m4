@@ -24,7 +24,7 @@ Some random text.
 EOF]
 AS_IF([$ac_path_JAR cf conftest.jar conftest.txt >/dev/null 2>&1 &&
        test -f conftest.jar],
-      [ac_cv_path_JAR=$ac_path_JAR ac_path_JAR_found=:])
+      [ac_cv_path_JAR="$ac_path_JAR" ac_path_JAR_found=:])
 rm -f conftest.jar conftest.txt])dnl
 AS_IF([test "x$JAVA_PREFIX" = x],
       [AC_CACHE_CHECK([for the Java archive tool],
@@ -37,10 +37,10 @@ AS_IF([test "x$JAVA_PREFIX" = x],
                       [AC_PATH_PROGS_FEATURE_CHECK([JAR], [jar],
                                                    [fltt_jar_test],
                                                    [ac_cv_path_JAR=no],
-                                                   [$JAVA_PREFIX/bin])])])
+                                                   ["$JAVA_PREFIX/bin"])])])
 m4_undefine([fltt_jar_test])dnl
 AS_IF([test "x$ac_cv_path_JAR" != xno],
-      [JAR=$ac_cv_path_JAR])
+      [JAR="$ac_cv_path_JAR"])
 AC_SUBST([JAR])[]dnl
 AC_ARG_VAR([JAR], [Java archiver tool])dnl
 ])# FLTT_PROG_JAR

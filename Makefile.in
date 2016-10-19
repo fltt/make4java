@@ -233,11 +233,12 @@ $(CLASSES_ALIAS_DIR): | $(CLASSES_DIR)
 #                         JAR archive
 # where <libname> is the name of the JAR/native library file without the
 # .jar or .so extension nor the version number.
-# The PARSE_LIB_AND_VER, BUILD_MAKE_RULES and BUILD_NATIVE_MAKE_RULES
-# macros will define them. They are described here as their main use is
-# to be listed in the RESOURCE_PLACEHOLDERS variable (see below) to
-# provide values to filter the resources with. Of course, you can employ
-# them wherever you see fit, e.g., to define new rules.
+# The PARSE_LIB_AND_VER, BUILD_MAKE_RULES, BUILD_TEST_MAKE_RULES and
+# BUILD_NATIVE_MAKE_RULES macros will define them. They are described
+# here as their main use is to be listed in the RESOURCE_PLACEHOLDERS
+# variable (see below) to provide values to filter the resources with.
+# Of course, you can employ them wherever you see fit, e.g., to define
+# new rules.
 # NOTE: <libname>.version and <libname>.jarname are automatically added
 #       to the RESOURCE_PLACEHOLDERS variable
 
@@ -254,15 +255,15 @@ RESOURCE_PLACEHOLDERS := package.name package.version resources.jars resources.l
 
 # Arguments:
 #   $(1) - component base directory (must end with '/')
-FIND_SOURCES = $(shell test -d $(1)$(SOURCES_PATH) && $(FIND) $(1)$(SOURCES_PATH) -name '*.java' | LC_ALL=C $(SED) -n '\|/[A-Za-z_$$][0-9A-Za-z_$$]*\.|p')
+FIND_SOURCES = $(shell test -d '$(1)$(SOURCES_PATH)' && $(FIND) '$(1)$(SOURCES_PATH)' -name '*.java' | LC_ALL=C $(SED) -n '\|/[A-Za-z_$$][0-9A-Za-z_$$]*\.|p')
 
 # Arguments:
 #   $(1) - component base directory (must end with '/')
-FIND_RESOURCES = $(shell test -d $(1)$(RESOURCES_PATH) && $(FIND) $(1)$(RESOURCES_PATH) -type f)
+FIND_RESOURCES = $(shell test -d '$(1)$(RESOURCES_PATH)' && $(FIND) '$(1)$(RESOURCES_PATH)' -type f)
 
 # Arguments:
 #   $(1) - component base directory (must end with '/')
-FIND_NATIVE_SOURCES = $(shell test -d $(1)$(NATIVE_SOURCES_PATH) && $(FIND) $(1)$(NATIVE_SOURCES_PATH) -name '*.c')
+FIND_NATIVE_SOURCES = $(shell test -d '$(1)$(NATIVE_SOURCES_PATH)' && $(FIND) '$(1)$(NATIVE_SOURCES_PATH)' -name '*.c')
 
 
 ######################
@@ -270,7 +271,7 @@ FIND_NATIVE_SOURCES = $(shell test -d $(1)$(NATIVE_SOURCES_PATH) && $(FIND) $(1)
 ######################
 
 # Retrieve all the external dependencies
-LIBRARIES := $(shell test -d $(EXTERNAL_LIBRARIES_DIR) && $(FIND) $(EXTERNAL_LIBRARIES_DIR) -name '*.jar')
+LIBRARIES := $(shell test -d '$(EXTERNAL_LIBRARIES_DIR)' && $(FIND) '$(EXTERNAL_LIBRARIES_DIR)' -name '*.jar')
 
 
 # Convert the parsed library name (see further below) into values
@@ -294,6 +295,8 @@ $$(MK_NAME).jarname := $(resources.jars)/$$(MK_JARNAME)
 
 RESOURCE_PLACEHOLDERS += $$(MK_NAME).version $$(MK_NAME).jarname
 
+# 'ln' is faster than 'cp -fpR', but will fail if source and build
+# trees reside in different file systems.
 $(BUILD_DIR)/$$(value $$(MK_NAME).jarname): $$(value $$(MK_NAME).buildname) | $(JARS_DIR)
 	$(RM) '$$@' && \
 	ln '$$<' '$$@'
@@ -305,7 +308,7 @@ endef # PARSE_LIB_AND_VER
 # directory, define the four library variables.
 # First, parse the file names and convert them into <libname>:<version>
 # strings, ...
-LIBS_AND_VERS := $(shell echo $(basename $(notdir $(LIBRARIES))) | $(SED) 's|\([^ ]*\)-\(\([0-9.]\{1,\}\)\(-[^ ]*\)\{0,1\}\)|\1:\2|g')
+LIBS_AND_VERS := $(shell echo '$(basename $(notdir $(LIBRARIES)))' | $(SED) 's|\([^ ]*\)-\(\([0-9.]\{1,\}\)\(-[^ ]*\)\{0,1\}\)|\1:\2|g')
 
 # ... then for each such string define the aforementioned library
 # variables.
@@ -335,7 +338,7 @@ MISSING_INCLUDED_COMPONENTS :=
 
 # Classpath for javac and javah
 # NOTE: The "empty" variable must NOT be defined
-CLASSPATH := -classpath $(subst $(empty) $(empty),:,$(strip $(CLASSES_DIR) $(LIBRARIES)))
+CLASSPATH := -classpath '$(subst $(empty) $(empty),:,$(strip $(CLASSES_DIR) $(LIBRARIES)))'
 
 
 # Verify the specified library has been defined
@@ -553,7 +556,7 @@ $(JAVAC_SOURCE_FILES_LIST): | $(BUILD_DIR)
 
 
 # Take note of the source files to be compiled (see also
-# the BUILD_MAKE_RULES macro above)
+# the BUILD_MAKE_RULES and BUILD_TEST_MAKE_RULES macros above)
 $(CLASSES_ALIAS_DIR)/%.class: | $(JAVAC_SOURCE_FILES_LIST)
 	echo '$<' >>'$(JAVAC_SOURCE_FILES_LIST)'
 
@@ -577,7 +580,7 @@ $(RESOURCES_FILTER_SCRIPT): | $(BUILD_DIR)
 
 # This rule applies the aforementioned sed script to the resource files.
 # NOTE: For text-only files this is good enough, but for binary,
-#       especially *big* binary files, this could cause some trouble.
+#       in particular *big* binary files, this could cause some trouble.
 #       A possible solution would be to split the resources into two
 #       distinct directories -- one for resources to filter and the
 #       other for resources to keep as are.
@@ -606,8 +609,8 @@ $(RESOURCES_DIR)/%: | $(RESOURCES_FILTER_SCRIPT)
 
 run-javac: | $(CLASSES_ALIAS_DIR) $(JAVAC_SOURCEPATHS_LIST) $(SOURCE_FILES_FULL_LIST)
 ifdef JDEPS
-	@if test -s $(JAVAC_SOURCE_FILES_LIST); then \
-	  echo "$(JAVAC) -Xlint:deprecation,unchecked -d '$(CLASSES_DIR)' $(CLASSPATH) '@$(JAVAC_SOURCEPATHS_LIST)' '@$(JAVAC_SOURCE_FILES_LIST)'" && \
+	@if test -s '$(JAVAC_SOURCE_FILES_LIST)'; then \
+	  echo "$(JAVAC) -Xlint:deprecation,unchecked -d $(CLASSES_DIR) $(CLASSPATH) @$(JAVAC_SOURCEPATHS_LIST) @$(JAVAC_SOURCE_FILES_LIST)" && \
 	  $(JAVAC) -Xlint:deprecation,unchecked -d '$(CLASSES_DIR)' $(CLASSPATH) '@$(JAVAC_SOURCEPATHS_LIST)' '@$(JAVAC_SOURCE_FILES_LIST)' && \
 	  if test -f '$(JAVA_DEPENDENCIES)'; then \
 	    echo "Updating $(JAVA_DEPENDENCIES)" && \
@@ -625,7 +628,7 @@ ifdef JDEPS
 	  $(SED) 's|^.*\(/$(SOURCES_PATH)/.*\)$$|sf["\1"]="&"|' '$(SOURCE_FILES_FULL_LIST)' >>'$(SOURCE_FILES_FULL_LIST).awk' && \
 	  echo "}" >>'$(SOURCE_FILES_FULL_LIST).awk' && \
 	  echo '{ if (sf[$$2]) print $$1 " " sf[$$2] }' >>'$(SOURCE_FILES_FULL_LIST).awk' && \
-	  echo "cat '$(JAVA_DEPENDENCIES).tmp' | $(XARGS) $(JDEPS) -v" && \
+	  echo "cat $(JAVA_DEPENDENCIES).tmp | $(XARGS) $(JDEPS) -v" && \
 	  cat '$(JAVA_DEPENDENCIES).tmp' | $(XARGS) $(JDEPS) -v | \
 	    $(SED) -n 's|\.|/|g;s|^  *\([^ ]\{1,\}\) *-> *\([^ ]\{1,\}\).*$$|$(CLASSES_ALIAS_DIR)/\1.class: /$(SOURCES_PATH)/\2.java|p' | \
 	    $(AWK) -f '$(SOURCE_FILES_FULL_LIST).awk' >>'$(JAVA_DEPENDENCIES)' && \
@@ -633,7 +636,7 @@ ifdef JDEPS
 	fi
 else # def JDEPS
 	@if test -s '$(SOURCE_FILES_FULL_LIST)' -a  -s '$(JAVAC_SOURCE_FILES_LIST)'; then \
-	  echo "$(JAVAC) -Xlint:deprecation,unchecked -d '$(CLASSES_DIR)' $(CLASSPATH) '@$(JAVAC_SOURCEPATHS_LIST)' '@$(SOURCE_FILES_FULL_LIST)'" && \
+	  echo "$(JAVAC) -Xlint:deprecation,unchecked -d $(CLASSES_DIR) $(CLASSPATH) @$(JAVAC_SOURCEPATHS_LIST) @$(SOURCE_FILES_FULL_LIST)" && \
 	  $(JAVAC) -Xlint:deprecation,unchecked -d '$(CLASSES_DIR)' $(CLASSPATH) '@$(JAVAC_SOURCEPATHS_LIST)' '@$(SOURCE_FILES_FULL_LIST)'; \
 	fi
 endif # def JDEPS
@@ -738,7 +741,7 @@ endif
 # any "config.h" you can remove it.
 $$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4)):
 	$(MKDIR_P) '$$(dir $$@)' && \
-	$(CPP) $(CPPFLAGS) $(JAVAH_CPPFLAGS) -I '$(INCLUDE_DIR)' -I. \
+	$(CPP) $(CPPFLAGS) $(JAVAH_CPPFLAGS) '-I$(INCLUDE_DIR)' -I. \
 	  -MT '$$(call SOURCES_TO_OBJECTS,$(1),$(2),$(4)) $$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4))' \
 	  -M -MG -MF '$$@' '$(4)'
 
@@ -747,7 +750,7 @@ $$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4)):
 $$(call SOURCES_TO_OBJECTS,$(1),$(2),$(4)):
 	$(MKDIR_P) '$$(dir $$@)' && \
 	$(CC) $(CFLAGS) $(3) $(CPPFLAGS) $(JAVAH_CPPFLAGS) \
-	  -I '$(INCLUDE_DIR)' -I. -c -o '$$@' '$(4)'
+	  '-I$(INCLUDE_DIR)' -I. -c -o '$$@' '$(4)'
 
 endef # BUILD_NATIVE_COMPILE_RULES
 
@@ -934,10 +937,11 @@ $$(foreach var,$(1),$$(eval $$(call INTO_STAGE,$(3),$$(var)): $$(var) | $(STAGE_
 endef # ADD_PACKAGE_RULES
 
 
-# Hard links are faster to build than copying files around
+# 'ln' is faster than 'cp -fpR', but will fail if source and build
+# trees reside in different file systems.
 $(STAGE_DIR)/$(TAR_ROOT_DIR)/%:
 	$(RM) '$@' && \
-	ln $(patsubst %,'%',$^) '$@'
+	ln '$<' '$@'
 
 # *.sh files are treated specially: they are both filtered as resources
 # and made executable
@@ -960,7 +964,7 @@ $(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version)-bin.tar$(COMPRESS_EXT): $(PACK
 	$(RM) '$@' && \
 	dir=$$(pwd) && \
 	cd '$(STAGE_DIR)' && \
-	tardir="$(TAR_ROOT_DIR)" && \
+	tardir='$(TAR_ROOT_DIR)' && \
 	$(TAR) | $(COMPRESS) >"$$dir/$@"
 
 .PHONY: package
@@ -983,11 +987,11 @@ uninstall:
 # Everything this Makefile builds is stored under $(BUILD_DIR)
 # or $(PACKAGE_DIR)
 clean:
-	$(RM) -r '$(BUILD_DIR)' '$(PACKAGE_DIR)'
+	-$(RM) -r '$(BUILD_DIR)' '$(PACKAGE_DIR)'
 
 distclean: clean
-	$(RM) Makefile config.status config.cache config.log \
-	      configure.lineno config.status.lineno config.h
+	-$(RM) Makefile config.status config.cache config.log \
+	       configure.lineno config.status.lineno config.h
 
 .PHONY: check installcheck dist doc
 

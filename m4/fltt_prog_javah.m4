@@ -44,7 +44,7 @@ $SED 's/^/| /' Conftest.java >&AS_MESSAGE_LOG_FD])])])
 AS_IF([test -f Conftest.class],
       [AS_IF([$ac_path_JAVAH Conftest >/dev/null 2>&1 &&
               test -f Conftest.h],
-             [ac_cv_path_JAVAH=$ac_path_JAVAH ac_path_JAVAH_found=:],
+             [ac_cv_path_JAVAH="$ac_path_JAVAH" ac_path_JAVAH_found=:],
              [AS_ECHO(["$as_me: javah test failed:"]) >&AS_MESSAGE_LOG_FD
 $SED 's/^/| /' Conftest.java >&AS_MESSAGE_LOG_FD])])])dnl
 AS_IF([test "x$JAVA_PREFIX" = x],
@@ -58,11 +58,11 @@ AS_IF([test "x$JAVA_PREFIX" = x],
                       [AC_PATH_PROGS_FEATURE_CHECK([JAVAH], [javah],
                                                    [fltt_javah_test],
                                                    [ac_cv_path_JAVAH=no],
-                                                   [$JAVA_PREFIX/bin])])])
+                                                   ["$JAVA_PREFIX/bin"])])])
 m4_undefine([fltt_javah_test])dnl
 rm -f Conftest.java Conftest.class Conftest.h
 AS_IF([test "x$ac_cv_path_JAVAH" != xno],
-      [JAVAH=$ac_cv_path_JAVAH])
+      [JAVAH="$ac_cv_path_JAVAH"])
 AC_SUBST([JAVAH])[]dnl
 AC_ARG_VAR([JAVAH], [Java C header and stub file generator])dnl
 dnl Check for jni.h's location
@@ -73,7 +73,7 @@ AC_CACHE_CHECK([for javah C preprocessor flags],
 AS_IF([test "x$JAVAH" = x],
       [AS_ECHO(["$as_me: cannot locate jni.h:"]) >&AS_MESSAGE_LOG_FD
 AS_ECHO(["  proceeding without a working Java C header generator is pointless"]) >&AS_MESSAGE_LOG_FD],
-      [fltt_save_CPPFLAGS=$CPPFLAGS
+      [fltt_save_CPPFLAGS="$CPPFLAGS"
 AS_CASE([$host_os],
         [cygwin*|mingw*], [fltt_os=win32],
         [fltt_os=`AS_ECHO($host_os) | $SED 's,@<:@-0-9@:>@.*,,'`])
@@ -113,7 +113,7 @@ AS_IF([test "x$fltt_cv_path_JAVAH_CPPFLAGS" = xno && test "x$JAVA_PREFIX" != x &
 AC_COMPILE_IFELSE([AC_LANG_SOURCE([@%:@include <jni.h>])],
                   [fltt_cv_path_JAVAH_CPPFLAGS="-I$JAVA_PREFIX/include -I$JAVA_PREFIX/include/$fltt_os"],
                   [AS_ECHO(["$as_me: could not find (a working) jni.h, have looked in: $JAVA_PREFIX/include"]) >&AS_MESSAGE_LOG_FD])])
-CPPFLAGS=$fltt_save_CPPFLAGS])],
+CPPFLAGS="$fltt_save_CPPFLAGS"])],
                       [fltt_cv_path_JAVAH_CPPFLAGS="$JAVAH_CPPFLAGS"])])
 AS_IF([test "x$fltt_cv_path_JAVAH_CPPFLAGS" != xno],
       [JAVAH_CPPFLAGS="$fltt_cv_path_JAVAH_CPPFLAGS"])

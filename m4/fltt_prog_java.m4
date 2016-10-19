@@ -38,7 +38,7 @@ $SED 's/^/| /' Conftest.java >&AS_MESSAGE_LOG_FD])])])
 AS_IF([test -f Conftest.class],
       [fltt_javaout=`$ac_path_JAVA Conftest 2>/dev/null`
 AS_IF([test "x$fltt_javaout" = "xIt works"],
-       [ac_cv_path_JAVA=$ac_path_JAVA ac_path_JAVA_found=:],
+       [ac_cv_path_JAVA="$ac_path_JAVA" ac_path_JAVA_found=:],
        [AS_ECHO(["$as_me: java test failed:"]) >&AS_MESSAGE_LOG_FD
 $SED 's/^/| /' Conftest.java >&AS_MESSAGE_LOG_FD])])])dnl
 AS_IF([test "x$JAVA_PREFIX" = x],
@@ -52,11 +52,11 @@ AS_IF([test "x$JAVA_PREFIX" = x],
                       [AC_PATH_PROGS_FEATURE_CHECK([JAVA], [java],
                                                    [fltt_java_test],
                                                    [ac_cv_path_JAVA=no],
-                                                   [$JAVA_PREFIX/bin])])])
+                                                   ["$JAVA_PREFIX/bin"])])])
 m4_undefine([fltt_java_test])dnl
 rm -f Conftest.java Conftest.class
 AS_IF([test "x$ac_cv_path_JAVA" != xno],
-      [JAVA=$ac_cv_path_JAVA])
+      [JAVA="$ac_cv_path_JAVA"])
 AC_SUBST([JAVA])[]dnl
 AC_ARG_VAR([JAVA], [Java application launcher])dnl
 ])# FLTT_PROG_JAVA
