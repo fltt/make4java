@@ -13,35 +13,11 @@
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
-package dummy.bar;
-
-
 /**
- * Sample methods to be implemented by the sample {@link dummy.foo}
- * package.
+ * Sample included package.
+ * <p>
+ * Shows how to implement native methods.
  *
  * @since 1.0.0
  */
-public interface Adder {
-    /**
-     * Sums two integers.
-     *
-     * @param a the first addend
-     * @param b the second addend
-     * @return the result
-     *
-     * @since 1.0.0
-     */
-    public int add(int a, int b);
-
-    /**
-     * Subtracts two integers.
-     *
-     * @param a the minuend
-     * @param b the subtrahend
-     * @return the result
-     *
-     * @since 1.0.0
-     */
-    public int subtract(int a, int b);
-}
+package dummy.foo;

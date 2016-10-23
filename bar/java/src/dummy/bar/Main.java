@@ -1,7 +1,7 @@
 /*
  * make4java - A Makefile for Java projects
  *
- * Written in 2015 by Francesco Lattanzio <franz.lattanzio@gmail.com>
+ * Written in 2016 by Francesco Lattanzio <franz.lattanzio@gmail.com>
  *
  * To the extent possible under law, the author have dedicated all
  * copyright and related and neighboring rights to this software to
@@ -25,10 +25,25 @@ import java.net.URLClassLoader;
 import java.util.Properties;
 
 
+/**
+ * A sample class to show how to access an included JAR archive.
+ *
+ * @since 1.0.0
+ */
 public class Main {
+    /**
+     * The properties contained in
+     * <code>dummy/bar/random.properties</code>.
+     */
     private Properties props;
 
 
+    /**
+     * Reads the properties from
+     * <code>dummy/bar/random.properties</code>.
+     *
+     * @return the properties
+     */
     private Properties loadProperties() {
         props = new Properties();
         try {
@@ -41,11 +56,21 @@ public class Main {
         return props;
     }
 
+    /**
+     * Initializes the {@link #props} variable.
+     */
     private Main() {
         props = loadProperties();
     }
 
 
+    /**
+     * Returns a &ldquo;banner&rdquo; string describing the package.
+     *
+     * @return the banner string
+     *
+     * @since 1.0.0
+     */
     public String banner() {
         StringBuilder sb = new StringBuilder();
         sb.append(props.get("vendor"));
@@ -61,6 +86,12 @@ public class Main {
         return sb.toString();
     }
 
+    /**
+     * Loads the included foo JAR archive and execute
+     * {@link dummy.foo.AdderImpl}'s methods.
+     *
+     * @since 1.0.0
+     */
     public void doSomething() {
         int l;
         byte[] buffer;
@@ -99,6 +130,15 @@ public class Main {
         }
     }
 
+    /**
+     * Does something with the properties contained in
+     * <code>dummy/bar/random.properties</code> and the included foo JAR
+     * archive.
+     *
+     * @param args command line arguments
+     *
+     * @since 1.0.0
+     */
     public static void main(String[] args) {
         Main main = new Main();
 

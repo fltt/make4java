@@ -25,8 +25,10 @@ A project employing the **make4java** approach will be made of:
 3. one or more `build.mk` files
 4. the source code
 
-The `configure.ac` and the `Makefile.in` will be copies of the ones
-provided here, modified to fit the project's specific requirements.
+The `configure.ac`, the files in the `m4` and `build-aux` directories,
+the `config.h.in` and the `Makefile.in` will be copies of the ones
+provided here, modified (or deleted if not used) to fit the project's
+specific requirements.
 
 The `build.mk` files are written from scratch, one for each JAR archive,
 test suite or native library.
@@ -39,8 +41,8 @@ long as they are kept separate from the source code.
 To make things more tangible, a full blown sample Java project is
 provided: it uses most of the features of **make4java**.
 
-If you're lucky, you'll only need to change a few lines of the sample
-`configure.ac` and `Makefile.in` to adapt them to your project.
+If you're lucky, you'll only need to change a few lines of the provided
+files to adapt them to your project.
 In the worst case you will need to add more checks to the `configure.ac`
 for some external program / library your project depends on or to
 add / modify a few `Makefile.in`'s rules, e.g., modify the packaging
@@ -73,8 +75,8 @@ The sample project follows the above schema:
 * both Java and native source code are rooted on `src` and the resources
   on `resources`
 * building the sample project will yield a `.tar.gz` containing
-  `bar/java`'s JAR archive, `foo/native`'s native library, `bin/run.sh`
-  and `doc/README`
+  `bar/java`'s JAR archive, `foo/native`'s native library, `bin/run.sh`,
+  `doc/README` and the Javadoc documentation
 
 To compile it, you need a JDK, version 1.3 or successive should do,
 however I've only tested version 1.6, 1.7 and 1.8 of OpenJDK.
@@ -117,7 +119,8 @@ option.
 I've tested the native code only in Linux and FreeBSD, however adding
 more architectures should be trivial using Autoconf.
 
-For a list of supported options / environment variables run:
+For a list of supported options and environment variables affecting the
+build process run:
 
 ```
 configure --help
@@ -201,10 +204,10 @@ source files will be recompiled at all.
 
 `jdeps` was added in JDK 1.8, however you don't need to compile your
 source code with JDK 1.8 just to enjoy incremental compilation: you can
-tell `configure` to use `jar`, `javac` and `javah` from, say, JDK 1.7
-and `jdeps` from JDK 1.8.
-All you need to do is to pass `configure` the `JAR`, `JAVAC`, `JAVAH`
-and `JDEPS` variables with appropriate values.
+tell `configure` to use `jar`, `java`, `javac`, `javadoc` and `javah`
+from, say, JDK 1.7 and `jdeps` from JDK 1.8.
+All you need to do is to pass `configure` the `JAR`, `JAVA`, `JAVAC`,
+`JAVADOC`, `JAVAH` and `JDEPS` variables with appropriate values.
 
 > **NOTE**: The proper way to pass `configure` those variables is:
 >
@@ -250,7 +253,7 @@ info autoconf
 > manage pathnames containing whitespaces and "special characters" in
 > them (see the `Autoconf` info page for a complete list).
 > So, if your project files or your tools contain special characters in
-> their name, expect troubles.
+> their names, expect troubles.
 > A simple fix is to create symbolic links -- without special characters
 > in their pathnames -- to those files and/or tools and give `configure`
 > the names of the symbolic links.
@@ -294,9 +297,6 @@ To use another subdirectory, redefine the `SOURCES_PATH` variable.
 
 "Components' build.mk files" contains a list of included `build.mk`
 files, one for each project's component.
-To make some of the components optional, you may put their include
-directives inside conditional blocks (see the sample `Makefile.in` for
-an example).
 More on the `build.mk` files in the next section.
 
 "Packaging" is meant to contain the instructions required to build one
@@ -307,14 +307,15 @@ it a specific section of `Makefile.in`.
 For the sake of illustration, the sample `Makefile.in` contains
 instructions to build a `.tar.gz` archive (if the `gzip` utility is
 available, or a plain `.tar` if not) containing some of the project's
-components, a README and a script to start the application.
+components, a README, a script to start the application and the Javadoc
+documentation.
 You may adapt it to your needs or write your own instructions from
 scratch, but, whichever path you decide to take, keep in mind that to
 add dependencies between the packaging targets and the projects'
 components add as many `$(<componentname>.buildname)` as required to the
 target's prerequisites (more on this in the next section).
 
-The sample `Makefile.in` define a several target, most of which are for
+The sample `Makefile.in` defines several targets, most of which are for
 internal use and are not meant to be invoked directly from the command
 line, except for the following ones:
 
@@ -356,8 +357,6 @@ The standard targets are:
 * `doc`: this is not a standard target, but I added it to build some
   Javadoc-style documentation
 
-> **NOTE**: the `doc` target is still work in progress.
-
 ### The build.mk ###
 The `Makefile.in` deals with global properties of the project, whereas
 the `build.mk` deals with the properties of a single component, i.e., a
@@ -383,8 +382,8 @@ $(eval $(call BUILD_NATIVE_MAKE_RULES,$(MK_NAME),$(MK_VERSION),$(MK_ENABLED),$(M
 
 in case of a native library.
 
-Those macros are defined, respectively, in the "Java components" and
-"Native components" parts of the `Makefile.in`.
+Those macros are defined in the "Java components" and in the "Native
+components" parts of the `Makefile.in`.
 The arguments to the macros define properties of the component, namely:
 
 * `MK_NAME` is the name of the component
@@ -452,8 +451,8 @@ Any `make` variable can be listed in `RESOURCE_PLACEHOLDERS`, however
 `RESOURCE_PLACEHOLDERS` is most useful when combined with the "library
 variables".
 
-For each external Java library, JAR archive or native library, the
-following four "library variables" are defined:
+For each external Java library, JAR archive, test suite or native
+library, the following four "library variables" are defined:
 
 * `<componentname>.version`, containing the version number of the
   library
@@ -566,7 +565,7 @@ $(JAVAC_SOURCEPATHS_LIST): | clean_javac_sourcepaths_list
 > SPACE characters but TAB characters.
 
 Having done this for each rule that employ the `file` function, you
-should have now a `Makefile.in` that work with previous versions of
+should have now a `Makefile.in` that works with previous versions of
 `make` as old as 3.81 and maybe older.
 
 > **NOTE**: I said *should* above, because I haven't tested it, so there

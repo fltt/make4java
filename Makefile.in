@@ -49,10 +49,11 @@ ENABLE_FOO_FEATURE = @ENABLE_FOO_FEATURE@
 JAR = @JAR@
 JAVA = @JAVA@
 JAVAC = @JAVAC@
+JAVADOC = @JAVADOC@
 JAVAH = @JAVAH@
 JDEPS = @JDEPS@
 
-# Assorted tools -- every UNIX-like OS should have these (and a
+# Common tools -- every UNIX-like OS should have these (and a
 # Bourne-like shell)
 AWK = @AWK@
 CC = @CC@
@@ -75,11 +76,17 @@ COMPRESS_EXT = @COMPRESS_EXT@
 # source files into object files, whereas the value of the LDFLAGS
 # variable will be used to link those object files into the native
 # dynamic library.
+# NOTE: The '-I.' is required to find "config.h". If your project does
+#       not have any "config.h" you can remove it.
 CFLAGS = @CFLAGS@
-CPPFLAGS = @CPPFLAGS@
+CPPFLAGS = @CPPFLAGS@ -I.
 JAVAH_CPPFLAGS = @JAVAH_CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
+
+# Options for the Java API Documentation Generator
+# NOTE: '-locale', if present, must be the first one
+JAVADOC_OPTIONS = -locale en_GB -encoding UTF-8 -charset UTF-8 -protected
 
 
 ####################################
@@ -132,12 +139,17 @@ BUILD_DIR := build
 # The name of the file that will hold the list of all the source files
 SOURCE_FILES_FULL_LIST := $(BUILD_DIR)/source-files
 
+# The name of the file that will hold the list of Java packages (this is
+# used by Javadoc and won't include packages defined by
+# BUILD_TEST_MAKE_RULES)
+JAVA_PACKAGES_LIST := $(BUILD_DIR)/java-packages
+
 # The name of the file that will hold the .class to .java dependencies
 JAVA_DEPENDENCIES := $(BUILD_DIR)/java-dependencies
 
-# The name of the file that will hold all the -sourcepath options
-# for javac
-JAVAC_SOURCEPATHS_LIST := $(BUILD_DIR)/javac-sourcepaths
+# The name of the file that will hold all the -sourcepath option
+# for javac and javadoc
+JAVAC_SOURCEPATH_LIST := $(BUILD_DIR)/javac-sourcepath
 
 # The name of the file that will hold the list of source files
 # to be compiled
@@ -190,15 +202,17 @@ AUTOCONF_GENERATED_FILES := configure
 # AUTOCONF_GENERATED_FILES (which are distributed too)
 AUTOCONF_DIST_FILES := configure.ac m4/fltt_prog_jar.m4 \
                        m4/fltt_prog_java.m4 m4/fltt_prog_javac.m4 \
-                       m4/fltt_prog_javah.m4 m4/fltt_prog_jdeps.m4 \
-                       m4/tar.m4
+                       m4/fltt_prog_javadoc.m4 m4/fltt_prog_javah.m4 \
+                       m4/fltt_prog_jdeps.m4 m4/tar.m4
 
 # The list of files to be distributed. The components' source and
 # resources files are added automatically (see BUILD_MAKE_RULES,
 # BUILD_TEST_MAKE_RULES and BUILD_NATIVE_MAKE_RULES).
-DIST_FILES := config.h.in COPYING Makefile.in README.md bin/run.sh \
+DIST_FILES := config.h.in COPYING Makefile.in README.md \
+              bar/java/src/dummy/bar/package-info.java bin/run.sh \
               build-aux/config.guess build-aux/config.sub \
-              build-aux/install-sh doc/README \
+              build-aux/install-sh doc/README doc/overview.html \
+              foo/java/src/dummy/foo/package-info.java \
               $(AUTOCONF_GENERATED_FILES) $(AUTOCONF_DIST_FILES)
 
 
@@ -209,6 +223,9 @@ TAR_ROOT_DIR := $(PACKAGE_NAME)-$(package.version)
 # The name of the directory that will hold all the files to be put into
 # the source TAR archive
 DIST_DIR := $(BUILD_DIR)/dist
+
+# The name of the directory that will hold Javadoc generated files
+DOC_DIR := $(BUILD_DIR)/doc
 
 # The name of the directory that will hold all the files to be put into
 # the binary TAR archive
@@ -279,7 +296,7 @@ RESOURCE_PLACEHOLDERS := package.name package.version resources.jars resources.l
 
 # Arguments:
 #   $(1) - component base directory (must end with '/')
-FIND_SOURCES = $(shell test -d '$(1)$(SOURCES_PATH)' && $(FIND) '$(1)$(SOURCES_PATH)' -name '*.java' | LC_ALL=C $(SED) -n '\|/[A-Za-z_$$][0-9A-Za-z_$$]*\.|p')
+FIND_SOURCES = $(shell test -d '$(1)$(SOURCES_PATH)' && $(FIND) '$(1)$(SOURCES_PATH)' -name '*.java' | LC_ALL=C $(SED) -n '\|/[A-Za-z_$$][0-9A-Za-z_$$]*\.java$$|p')
 
 # Arguments:
 #   $(1) - component base directory (must end with '/')
@@ -346,11 +363,20 @@ $(foreach var,$(LIBS_AND_VERS),$(eval $(call PARSE_LIB_AND_VER,$(var))))
 # Java components' JAR archives
 JAR_ARCHIVES :=
 
-# javac's -sourcepath directories list
+# javac's and javadoc's -sourcepath directories list
 SOURCE_DIRECTORIES :=
+
+# More javac's -sourcepath directories
+TEST_SOURCE_DIRECTORIES :=
 
 # Java source files
 SOURCE_FILES :=
+
+# Java tests source files
+TEST_SOURCE_FILES :=
+
+# Java packages
+JAVA_PACKAGES :=
 
 # List of targets to run all the tests
 TEST_TARGETS :=
@@ -364,6 +390,10 @@ MISSING_INCLUDED_COMPONENTS :=
 # NOTE: The "empty" variable must NOT be defined
 CLASSPATH := -classpath '$(subst $(empty) $(empty),:,$(strip $(CLASSES_DIR) $(LIBRARIES)))'
 
+# Classpath for javadoc
+# NOTE: The "empty" variable must NOT be defined
+DOC_CLASSPATH := -classpath '$(subst $(empty) $(empty),:,$(strip $(LIBRARIES)))'
+
 
 # Verify the specified library has been defined
 
@@ -376,6 +406,15 @@ MISSING_INCLUDED_COMPONENTS += $(1)
 endif
 
 endef # CHECK_INCLUDED
+
+
+# Convert Java source file names into their corresponding Java package
+# names
+
+# Arguments:
+#   $(1) - component base directory (must end with '/')
+#   $(2) - Java source file names
+SOURCES_TO_PACKAGES = $(sort $(subst /,.,$(patsubst $(1)$(SOURCES_PATH)/%/,%,$(dir $(2)))))
 
 
 # Convert Java source file names into their corresponding alias class
@@ -453,21 +492,23 @@ MK_JARNAME := $(if $(2),$(1)-$(2).jar,$(1).jar)
 
 $(1).version := $(2)
 $(1).basename := $$(MK_JARNAME)
-$(1).buildname := $(JARS_DIR)/$$(MK_JARNAME)
-$(1).jarname := $(resources.jars)/$$(MK_JARNAME)
 
-DIST_FILES += $$(lastword $$(MAKEFILE_LIST))
-DIST_FILES += $(5)
-DIST_FILES += $(6)
+DIST_FILES += $(patsubst @top_srcdir@/%,%,$(lastword $(MAKEFILE_LIST)))
+DIST_FILES += $(patsubst @top_srcdir@/%,%,$(5))
+DIST_FILES += $(patsubst @top_srcdir@/%,%,$(6))
 RESOURCE_PLACEHOLDERS += $(1).version $(1).jarname
+
+ifeq ($(3),yes)
 
 $$(foreach var,$(7),$$(eval $$(call CHECK_INCLUDED,$$(var))))
 
-ifeq ($(3),yes)
+$(1).buildname := $(JARS_DIR)/$$(MK_JARNAME)
+$(1).jarname := $(resources.jars)/$$(MK_JARNAME)
 
 JAR_ARCHIVES += $$(value $(1).buildname)
 SOURCE_DIRECTORIES += $(4)
 SOURCE_FILES += $(5)
+JAVA_PACKAGES += $$(call SOURCES_TO_PACKAGES,$(4),$(5))
 
 $$(foreach var,$(5),$$(eval $$(call SOURCES_TO_ALIAS_CLASSES,$(4),$$(var)): $$(var)))
 
@@ -517,20 +558,21 @@ MK_JARNAME := $(if $(2),$(1)-$(2).jar,$(1).jar)
 
 $(1).version := $(2)
 $(1).basename := $$(MK_JARNAME)
-$(1).buildname := $(JARS_DIR)/$$(MK_JARNAME)
-$(1).jarname := $(resources.jars)/$$(MK_JARNAME)
 
-DIST_FILES += $$(lastword $$(MAKEFILE_LIST))
-DIST_FILES += $(5)
-DIST_FILES += $(6)
+DIST_FILES += $(patsubst @top_srcdir@/%,%,$(lastword $(MAKEFILE_LIST)))
+DIST_FILES += $(patsubst @top_srcdir@/%,%,$(5))
+DIST_FILES += $(patsubst @top_srcdir@/%,%,$(6))
 RESOURCE_PLACEHOLDERS += $(1).version $(1).jarname
-
-$$(foreach var,$(7),$$(eval $$(call CHECK_INCLUDED,$$(var))))
 
 ifeq ($(3),yes)
 
-SOURCE_DIRECTORIES += $(4)
-SOURCE_FILES += $(5)
+$$(foreach var,$(7),$$(eval $$(call CHECK_INCLUDED,$$(var))))
+
+$(1).buildname := $(JARS_DIR)/$$(MK_JARNAME)
+$(1).jarname := $(resources.jars)/$$(MK_JARNAME)
+
+TEST_SOURCE_DIRECTORIES += $(4)
+TEST_SOURCE_FILES += $(5)
 TEST_TARGETS += check-$(1)
 
 $$(foreach var,$(5),$$(eval $$(call SOURCES_TO_ALIAS_CLASSES,$(4),$$(var)): $$(var)))
@@ -555,7 +597,7 @@ $$(value $(1).buildname): $$(call SOURCES_TO_CLASSES,$(4),$(5)) \
 
 check-$(1): $$(value $(1).buildname) \
             $$(foreach var,$(7),$$(value $$(var).buildname))
-	$(JAVA) '-Djava.class.path=$$(subst $$(empty) $$(empty),:,$$(strip $$^))' \
+	$(JAVA) '-Djava.class.path=$$(subst $$(empty) $$(empty),:,$$(strip $$(filter %.jar,$$^)))' \
 	  '-Djava.library.path=$(NATIVE_DIR)' $(8)
 
 endif # eq ($(3),yes)
@@ -566,12 +608,11 @@ endef # BUILD_TEST_MAKE_RULES
 # Store a list of -sourcepath directories -- the .PHONY special target
 # ensures that it is rebuilt at every run
 
-.PHONY: $(JAVAC_SOURCEPATHS_LIST)
+.PHONY: $(JAVAC_SOURCEPATH_LIST)
 
-$(JAVAC_SOURCEPATHS_LIST): | $(BUILD_DIR)
+$(JAVAC_SOURCEPATH_LIST): | $(BUILD_DIR)
 	@echo 'Building $@' \
-	$(file >$@) \
-	$(foreach var,$(SOURCE_DIRECTORIES),$(file >>$@,-sourcepath $(var)$(SOURCES_PATH)))
+	$(file >$@,-sourcepath $(subst $(empty) $(empty),:,$(addsuffix $(SOURCES_PATH),$(strip $(SOURCE_DIRECTORIES) $(TEST_SOURCE_DIRECTORIES)))))
 
 
 # Store the list of all the Java source files -- the .PHONY special
@@ -582,7 +623,7 @@ $(JAVAC_SOURCEPATHS_LIST): | $(BUILD_DIR)
 $(SOURCE_FILES_FULL_LIST): | $(BUILD_DIR)
 	@echo 'Building $@' \
 	$(file >$@) \
-	$(foreach var,$(SOURCE_FILES),$(file >>$@,$(var)))
+	$(foreach var,$(SOURCE_FILES) $(TEST_SOURCE_FILES),$(file >>$@,$(var)))
 
 
 # Clean-up the list of to-be-compiled Java source files (it will be
@@ -647,13 +688,13 @@ $(RESOURCES_DIR)/%: | $(RESOURCES_FILTER_SCRIPT)
 
 .PHONY: run-javac
 
-run-javac: | $(CLASSES_ALIAS_DIR) $(JAVAC_SOURCEPATHS_LIST) $(SOURCE_FILES_FULL_LIST)
+run-javac: | $(CLASSES_ALIAS_DIR) $(JAVAC_SOURCEPATH_LIST) $(SOURCE_FILES_FULL_LIST)
 ifdef JDEPS
 	@if test -s '$(JAVAC_SOURCE_FILES_LIST)'; then \
-	  echo "$(JAVAC) -Xlint:deprecation,unchecked -d $(CLASSES_DIR) $(CLASSPATH) @$(JAVAC_SOURCEPATHS_LIST) @$(JAVAC_SOURCE_FILES_LIST)" && \
-	  $(JAVAC) -Xlint:deprecation,unchecked -d '$(CLASSES_DIR)' $(CLASSPATH) '@$(JAVAC_SOURCEPATHS_LIST)' '@$(JAVAC_SOURCE_FILES_LIST)' && \
+	  echo '$(JAVAC) -Xlint:deprecation,unchecked -d $(CLASSES_DIR) $(CLASSPATH) @$(JAVAC_SOURCEPATH_LIST) @$(JAVAC_SOURCE_FILES_LIST)' && \
+	  $(JAVAC) -Xlint:deprecation,unchecked -d '$(CLASSES_DIR)' $(CLASSPATH) '@$(JAVAC_SOURCEPATH_LIST)' '@$(JAVAC_SOURCE_FILES_LIST)' && \
 	  if test -f '$(JAVA_DEPENDENCIES)'; then \
-	    echo "Updating $(JAVA_DEPENDENCIES)" && \
+	    echo 'Updating $(JAVA_DEPENDENCIES)' && \
 	    $(FIND) -H '$(CLASSES_ALIAS_DIR)' -name '*.class' -cnewer '$(JAVA_DEPENDENCIES)' >'$(JAVA_DEPENDENCIES).tmp' && \
 	    cat '$(JAVA_DEPENDENCIES).tmp' | while read cf; do \
 	      cf=$$(echo $$cf | $(SED) 's|\$$|\\$$|g'); \
@@ -661,14 +702,14 @@ ifdef JDEPS
 	      mv '$(JAVA_DEPENDENCIES).bak' '$(JAVA_DEPENDENCIES)'; \
 	    done \
 	  else \
-	    echo "Building $(JAVA_DEPENDENCIES)" && \
+	    echo 'Building $(JAVA_DEPENDENCIES)' && \
 	    $(FIND) -H '$(CLASSES_ALIAS_DIR)' -name '*.class' >'$(JAVA_DEPENDENCIES).tmp'; \
 	  fi && \
-	  echo "BEGIN {" >'$(SOURCE_FILES_FULL_LIST).awk' && \
+	  echo 'BEGIN {' >'$(SOURCE_FILES_FULL_LIST).awk' && \
 	  $(SED) 's|^.*\(/$(SOURCES_PATH)/.*\)$$|sf["\1"]="&"|' '$(SOURCE_FILES_FULL_LIST)' >>'$(SOURCE_FILES_FULL_LIST).awk' && \
-	  echo "}" >>'$(SOURCE_FILES_FULL_LIST).awk' && \
+	  echo '}' >>'$(SOURCE_FILES_FULL_LIST).awk' && \
 	  echo '{ if (sf[$$2]) print $$1 " " sf[$$2] }' >>'$(SOURCE_FILES_FULL_LIST).awk' && \
-	  echo "cat $(JAVA_DEPENDENCIES).tmp | $(XARGS) $(JDEPS) -v" && \
+	  echo 'cat $(JAVA_DEPENDENCIES).tmp | $(XARGS) $(JDEPS) -v' && \
 	  cat '$(JAVA_DEPENDENCIES).tmp' | $(XARGS) $(JDEPS) -v | \
 	    $(SED) -n 's|\.|/|g;s|^  *\([^ ]\{1,\}\) *-> *\([^ ]\{1,\}\).*$$|$(CLASSES_ALIAS_DIR)/\1.class: /$(SOURCES_PATH)/\2.java|p' | \
 	    $(AWK) -f '$(SOURCE_FILES_FULL_LIST).awk' >>'$(JAVA_DEPENDENCIES)' && \
@@ -676,8 +717,8 @@ ifdef JDEPS
 	fi
 else # def JDEPS
 	@if test -s '$(SOURCE_FILES_FULL_LIST)' -a  -s '$(JAVAC_SOURCE_FILES_LIST)'; then \
-	  echo "$(JAVAC) -Xlint:deprecation,unchecked -d $(CLASSES_DIR) $(CLASSPATH) @$(JAVAC_SOURCEPATHS_LIST) @$(SOURCE_FILES_FULL_LIST)" && \
-	  $(JAVAC) -Xlint:deprecation,unchecked -d '$(CLASSES_DIR)' $(CLASSPATH) '@$(JAVAC_SOURCEPATHS_LIST)' '@$(SOURCE_FILES_FULL_LIST)'; \
+	  echo '$(JAVAC) -Xlint:deprecation,unchecked -d $(CLASSES_DIR) $(CLASSPATH) @$(JAVAC_SOURCEPATH_LIST) @$(SOURCE_FILES_FULL_LIST)' && \
+	  $(JAVAC) -Xlint:deprecation,unchecked -d '$(CLASSES_DIR)' $(CLASSPATH) '@$(JAVAC_SOURCEPATH_LIST)' '@$(SOURCE_FILES_FULL_LIST)'; \
 	fi
 endif # def JDEPS
 
@@ -777,20 +818,16 @@ include $$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4))
 endif
 
 
-# -I. is required to find "config.h". If your project does not have
-# any "config.h" you can remove it.
 $$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4)):
 	$(MKDIR_P) '$$(dir $$@)' && \
-	$(CPP) $(CPPFLAGS) $(JAVAH_CPPFLAGS) '-I$(INCLUDE_DIR)' -I. \
+	$(CPP) $(CPPFLAGS) $(JAVAH_CPPFLAGS) '-I$(INCLUDE_DIR)' \
 	  -MT '$$(call SOURCES_TO_OBJECTS,$(1),$(2),$(4)) $$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4))' \
 	  -M -MG -MF '$$@' '$(4)'
 
-# -I. is required to find "config.h". If your project does not have
-# any "config.h" you can remove it.
 $$(call SOURCES_TO_OBJECTS,$(1),$(2),$(4)):
 	$(MKDIR_P) '$$(dir $$@)' && \
 	$(CC) $(CFLAGS) $(3) $(CPPFLAGS) $(JAVAH_CPPFLAGS) \
-	  '-I$(INCLUDE_DIR)' -I. -c -o '$$@' '$(4)'
+	  '-I$(INCLUDE_DIR)' -c -o '$$@' '$(4)'
 
 endef # BUILD_NATIVE_COMPILE_RULES
 
@@ -822,14 +859,15 @@ MK_LIBNAME := $(if $(2),$(1)-$(2).so,$(1).so)
 
 $(1).version := $(2)
 $(1).basename := $$(MK_LIBNAME)
-$(1).buildname := $(NATIVE_DIR)/$$(MK_LIBNAME)
-$(1).jarname := $(resources.libs)/$$(MK_LIBNAME)
 
-DIST_FILES += $$(lastword $$(MAKEFILE_LIST))
-DIST_FILES += $(5)
+DIST_FILES += $(patsubst @top_srcdir@/%,%,$(lastword $(MAKEFILE_LIST)))
+DIST_FILES += $(patsubst @top_srcdir@/%,%,$(5))
 RESOURCE_PLACEHOLDERS += $(1).version $(1).jarname
 
 ifeq ($(3),yes)
+
+$(1).buildname := $(NATIVE_DIR)/$$(MK_LIBNAME)
+$(1).jarname := $(resources.libs)/$$(MK_LIBNAME)
 
 JAVAH_CLASS_NAMES += $(8)
 NATIVE_LIBRARIES += $$(value $(1).buildname)
@@ -858,12 +896,12 @@ endef # BUILD_NATIVE_MAKE_RULES
 # the recompiled classes will be processed through javah
 
 $(JAVAH_CLASSES_LIST): | $(INCLUDE_DIR)
-	@echo "Building $@"; \
+	@echo 'Building $@'; \
 	$(file >$@) \
 	$(foreach var,$?,$(file >>$@,$(call CLASSFILE_TO_CLASSNAME,$(var)))) \
 	if test -s '$@'; then \
-	  echo "Building JNI headers"; \
-	  echo "cat $@ | $(XARGS) $(JAVAH) -d $(INCLUDE_DIR) $(CLASSPATH)" && \
+	  echo 'Building JNI headers'; \
+	  echo 'cat $@ | $(XARGS) $(JAVAH) -d $(INCLUDE_DIR) $(CLASSPATH)' && \
 	  cat '$@' | $(XARGS) $(JAVAH) -d '$(INCLUDE_DIR)' $(CLASSPATH); \
 	fi
 
@@ -932,17 +970,15 @@ components: $(JAR_ARCHIVES) $(NATIVE_LIBRARIES)
 # package (there's no need for the directory structure inside the
 # package to match the project's)
 
-BAR_BIN_BUILD_LIST := bin/run.sh
+BAR_README_BUILD_LIST := doc/README
 
-BAR_DOC_BUILD_LIST := doc/README
+BAR_BIN_BUILD_LIST := bin/run.sh
 
 BAR_JAR_BUILD_LIST := $(bar.buildname)
 
-FOO_NATIVE_BUILD_LIST :=
-
-ifeq ($(ENABLE_FOO_FEATURE),yes)
-FOO_NATIVE_BUILD_LIST += $(libfoo.buildname)
-endif
+# If ENABLE_FOO_FEATURE is 'no' $(libfoo.buildname) will expand to
+# the empty string
+FOO_NATIVE_BUILD_LIST := $(libfoo.buildname)
 
 
 # Convert the file names listed in the *_BUILD_LIST variables into their
@@ -993,13 +1029,26 @@ $(STAGE_DIR)/$(TAR_ROOT_DIR)/%.sh: | $(RESOURCES_FILTER_SCRIPT)
 	$(SED) -f '$(RESOURCES_FILTER_SCRIPT)' '$<' >'$@' && \
 	chmod a+x '$@'
 
+# Javadoc documentation requires a specific rule
+# NOTE: Can't use hard links here -- they don't work with directories
+$(STAGE_DIR)/$(TAR_ROOT_DIR)/doc/index.html: $(DOC_DIR)/index.html
+	$(RM) -r '$(dir $@)' && \
+	$(MKDIR_P) '$(STAGE_DIR)/$(TAR_ROOT_DIR)' && \
+	cp -fpR '$(DOC_DIR)' '$(dir $@)'
+
 
 # PACKAGE_STAGE_LIST will hold the list of the files that build up the
 # TAR archive -- it is used to specify the prerequisites of the package
-PACKAGE_STAGE_LIST :=
+# NOTE: The file specified below will trigger the previous rule that
+#       will copy all the files generated by Javadoc, not just the
+#       specified one.
+PACKAGE_STAGE_LIST := $(STAGE_DIR)/$(TAR_ROOT_DIR)/doc/index.html
 
+# Alongside the 'bin', 'lib' and 'native' directories, the binary TAR
+# archive will also contain the 'doc' directory created by the previous
+# rule
+$(eval $(call ADD_PACKAGE_RULES,$(BAR_README_BUILD_LIST),PACKAGE_STAGE_LIST,))
 $(eval $(call ADD_PACKAGE_RULES,$(BAR_BIN_BUILD_LIST),PACKAGE_STAGE_LIST,/bin))
-$(eval $(call ADD_PACKAGE_RULES,$(BAR_DOC_BUILD_LIST),PACKAGE_STAGE_LIST,/doc))
 $(eval $(call ADD_PACKAGE_RULES,$(BAR_JAR_BUILD_LIST),PACKAGE_STAGE_LIST,/lib))
 $(eval $(call ADD_PACKAGE_RULES,$(FOO_NATIVE_BUILD_LIST),PACKAGE_STAGE_LIST,/native))
 
@@ -1016,9 +1065,9 @@ $(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version)-bin.tar$(COMPRESS_EXT): $(PACK
 package: $(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version)-bin.tar$(COMPRESS_EXT)
 
 
-####################
-# Standard targets #
-####################
+################
+# More targets #
+################
 
 .PHONY: all install install-strip uninstall
 
@@ -1042,7 +1091,7 @@ distclean: clean
 check installcheck: $(TEST_TARGETS)
 
 $(AUTOCONF_GENERATED_FILES): $(AUTOCONF_DIST_FILES)
-	@echo "Building $@"; \
+	@echo 'Building $@'; \
 	autoreconf
 
 $(foreach var,$(DIST_FILES),$(eval $(DIST_DIR)/$(TAR_ROOT_DIR)/$(var): $(var)))
@@ -1055,14 +1104,27 @@ $(DIST_DIR)/$(TAR_ROOT_DIR)/%:
 	ln '$<' '$@'
 
 $(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version)-src.tar$(COMPRESS_EXT): $(addprefix $(DIST_DIR)/$(TAR_ROOT_DIR)/,$(DIST_FILES)) | $(PACKAGE_DIR)
-	echo "DIST_FILES = $(DIST_FILES)" && \
 	$(RM) '$@' && \
 	dir=$$(pwd) && \
 	cd '$(DIST_DIR)' && \
 	tardir='$(TAR_ROOT_DIR)' && \
 	$(TAR) | $(COMPRESS) >"$$dir/$@"
 
+
+# Store the list of Java packages -- the .PHONY special target ensures
+# that it is rebuilt at every run
+
+.PHONY: $(JAVA_PACKAGES_LIST)
+
+$(JAVA_PACKAGES_LIST): | $(BUILD_DIR)
+	@echo 'Building $@' \
+	$(file >$@,-sourcepath $(subst $(empty) $(empty),:,$(addsuffix $(SOURCES_PATH),$(strip $(SOURCE_DIRECTORIES))))) \
+	$(foreach var,$(sort $(JAVA_PACKAGES)),$(file >>$@,$(var)))
+
 dist: $(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version)-src.tar$(COMPRESS_EXT)
 
-doc:
-	@echo "Coming soon..."
+$(DOC_DIR)/index.html: | $(BUILD_DIR) $(JAVA_PACKAGES_LIST)
+	@$(JAVADOC) $(JAVADOC_OPTIONS) -d '$(DOC_DIR)' $(DOC_CLASSPATH) \
+	  -overview '@top_srcdir@/doc/overview.html' @$(JAVA_PACKAGES_LIST)
+
+doc: $(DOC_DIR)/index.html

@@ -72,6 +72,9 @@ AS_IF([test "x$JAR" = x],
 FLTT_PROG_JAVA
 AS_IF([test "x$JAVA" = x],
       [missing_programs="$missing_programs java"])
+FLTT_PROG_JAVADOC
+AS_IF([test "x$JAVADOC" = x],
+      [missing_programs="$missing_programs javadoc"])
 dnl *** Check for tools required only when compiling native code ***
 dnl NOTE: Autoconf expands all the AC_REQUIRE'd macros outside
 dnl       conditional blocks on purpose. To ensure that all those
