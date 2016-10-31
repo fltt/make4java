@@ -97,7 +97,7 @@ JAVADOC_OPTIONS = -locale en_GB -encoding UTF-8 -charset UTF-8 -protected
 package.name := @PACKAGE_NAME@
 
 # This and the next variable are used to build the name of the source
-# and binary TAR archives
+# and binary packages
 PACKAGE_NAME := @PACKAGE_TARNAME@
 
 # Version number of the package (each component has its own version
@@ -217,22 +217,22 @@ DIST_FILES := config.h.in COPYING Makefile.in README.md \
 
 
 # The name of the single top level directory that will contain all
-# the files and directory of the source and binary TAR archives
+# the files and directory of the source and binary packages
 TAR_ROOT_DIR := $(PACKAGE_NAME)-$(package.version)
 
 # The name of the directory that will hold all the files to be put into
-# the source TAR archive
+# the source package(s)
 DIST_DIR := $(BUILD_DIR)/dist
 
 # The name of the directory that will hold Javadoc generated files
 DOC_DIR := $(BUILD_DIR)/doc
 
 # The name of the directory that will hold all the files to be put into
-# the binary TAR archive
+# the binary package(s)
 STAGE_DIR := $(BUILD_DIR)/stage
 
 # The name of the directory that will hold all the packages built (for
-# this sample Makefile there will be only a binary packages and a source
+# this sample Makefile there will be only a binary package and a source
 # package)
 PACKAGE_DIR := packages
 
@@ -245,10 +245,10 @@ NO_BUILD_TARGETS := uninstall clean distclean dist doc
 all:
 
 $(BUILD_DIR) $(PACKAGE_DIR):
-	mkdir '$@'
+	$(MKDIR_P) '$@'
 
 $(CLASSES_DIR) $(INCLUDE_DIR) $(JARS_DIR) $(NATIVE_DIR): | $(BUILD_DIR)
-	mkdir '$@'
+	$(MKDIR_P) '$@'
 
 $(CLASSES_ALIAS_DIR): | $(CLASSES_DIR)
 	cd '$(dir $@)' && \
@@ -671,9 +671,9 @@ $(RESOURCES_DIR)/%: | $(RESOURCES_FILTER_SCRIPT)
 	$(SED) -f '$(RESOURCES_FILTER_SCRIPT)' '$<' >'$@'
 
 
-# The following rule will actually compile the code and extract
+# The 'run-javac' rule will actually compile the code and extract
 # the dependencies (if jdeps is available and enabled).
-# The difficult part is dependencies extraction:
+# The difficult part is the dependencies extraction:
 # 1) first the newly compiled classes are removed from the
 #    $(JAVA_DEPENDENCIES) files
 # 2) then an AWK script is built to convert partial (without component
@@ -954,12 +954,12 @@ endif
 components: $(JAR_ARCHIVES) $(NATIVE_LIBRARIES)
 
 
-#############
-# Packaging #
-#############
+###################
+# Binary packages #
+###################
 
 # This section contains rules to collect the JARs and native libraries
-# into a binary TAR archive.
+# into one or more binary packages.
 # This is just an example -- you can (and should) customize them to your
 # taste, e.g., collecting them into multiple packages or maybe just
 # moving the JARs into some predefined directory.
@@ -994,7 +994,7 @@ INTO_STAGE = $(addprefix $(STAGE_DIR)/$(TAR_ROOT_DIR)$(1)/,$(notdir $(2)))
 # between the stage files and their respective *_BUILD_LIST files.
 # All the stage file names are collected in a variable whose name is
 # specified in the second argument -- it will be used to define the
-# binary TAR archive's prerequisites.
+# binary package's prerequisites.
 # The '$(STAGE_DIR)/$(TAR_ROOT_DIR)/%' and
 # '$(STAGE_DIR)/$(TAR_ROOT_DIR)/%.sh' rules below will copy the files
 # into their place under the stage directory.
@@ -1044,8 +1044,8 @@ $(STAGE_DIR)/$(TAR_ROOT_DIR)/doc/index.html: $(DOC_DIR)/index.html
 #       specified one.
 PACKAGE_STAGE_LIST := $(STAGE_DIR)/$(TAR_ROOT_DIR)/doc/index.html
 
-# Alongside the 'bin', 'lib' and 'native' directories, the binary TAR
-# archive will also contain the 'doc' directory created by the previous
+# Alongside the 'bin', 'lib' and 'native' directories, the binary
+# package will also contain the 'doc' directory created by the previous
 # rule
 $(eval $(call ADD_PACKAGE_RULES,$(BAR_README_BUILD_LIST),PACKAGE_STAGE_LIST,))
 $(eval $(call ADD_PACKAGE_RULES,$(BAR_BIN_BUILD_LIST),PACKAGE_STAGE_LIST,/bin))
@@ -1053,42 +1053,36 @@ $(eval $(call ADD_PACKAGE_RULES,$(BAR_JAR_BUILD_LIST),PACKAGE_STAGE_LIST,/lib))
 $(eval $(call ADD_PACKAGE_RULES,$(FOO_NATIVE_BUILD_LIST),PACKAGE_STAGE_LIST,/native))
 
 
-$(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version)-bin.tar$(COMPRESS_EXT): $(PACKAGE_STAGE_LIST) | $(PACKAGE_DIR)
+.PHONY: all install install-strip bin-packages uninstall
+
+# Build the binary package as a TAR archive -- to generate a different
+# kind of archive you need to modify only the following two rules
+$(PACKAGE_DIR)/$(TAR_ROOT_DIR)-bin.tar$(COMPRESS_EXT): $(PACKAGE_STAGE_LIST) | $(PACKAGE_DIR)
 	$(RM) '$@' && \
 	dir=$$(pwd) && \
 	cd '$(STAGE_DIR)' && \
 	tardir='$(TAR_ROOT_DIR)' && \
 	$(TAR) | $(COMPRESS) >"$$dir/$@"
 
-.PHONY: package
+bin-packages: $(PACKAGE_DIR)/$(TAR_ROOT_DIR)-bin.tar$(COMPRESS_EXT)
 
-package: $(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version)-bin.tar$(COMPRESS_EXT)
-
-
-################
-# More targets #
-################
-
-.PHONY: all install install-strip uninstall
-
-all install install-strip: package
+all install install-strip: bin-packages
 
 uninstall:
 
-.PHONY: clean distclean
 
-# Everything this Makefile builds is stored under $(BUILD_DIR)
-# or $(PACKAGE_DIR)
-clean:
-	-$(RM) -r '$(BUILD_DIR)' '$(PACKAGE_DIR)'
+#############
+# Run tests #
+#############
 
-distclean: clean
-	-$(RM) Makefile config.status config.cache config.log \
-	       configure.lineno config.status.lineno config.h
-
-.PHONY: check installcheck dist doc
+.PHONY: check installcheck
 
 check installcheck: $(TEST_TARGETS)
+
+
+###################
+# Source packages #
+###################
 
 $(AUTOCONF_GENERATED_FILES): $(AUTOCONF_DIST_FILES)
 	@echo 'Building $@'; \
@@ -1103,13 +1097,24 @@ $(DIST_DIR)/$(TAR_ROOT_DIR)/%:
 	$(MKDIR_P) '$(dir $@)' && \
 	ln '$<' '$@'
 
-$(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version)-src.tar$(COMPRESS_EXT): $(addprefix $(DIST_DIR)/$(TAR_ROOT_DIR)/,$(DIST_FILES)) | $(PACKAGE_DIR)
+
+.PHONY: dist
+
+# Build the source package as a TAR archive -- to generate a different
+# kind of archive you need to modify only the following two rules
+$(PACKAGE_DIR)/$(TAR_ROOT_DIR)-src.tar$(COMPRESS_EXT): $(addprefix $(DIST_DIR)/$(TAR_ROOT_DIR)/,$(DIST_FILES)) | $(PACKAGE_DIR)
 	$(RM) '$@' && \
 	dir=$$(pwd) && \
 	cd '$(DIST_DIR)' && \
 	tardir='$(TAR_ROOT_DIR)' && \
 	$(TAR) | $(COMPRESS) >"$$dir/$@"
 
+dist: $(PACKAGE_DIR)/$(TAR_ROOT_DIR)-src.tar$(COMPRESS_EXT)
+
+
+#################
+# Documentation #
+#################
 
 # Store the list of Java packages -- the .PHONY special target ensures
 # that it is rebuilt at every run
@@ -1121,10 +1126,27 @@ $(JAVA_PACKAGES_LIST): | $(BUILD_DIR)
 	$(file >$@,-sourcepath $(subst $(empty) $(empty),:,$(addsuffix $(SOURCES_PATH),$(strip $(SOURCE_DIRECTORIES))))) \
 	$(foreach var,$(sort $(JAVA_PACKAGES)),$(file >>$@,$(var)))
 
-dist: $(PACKAGE_DIR)/$(PACKAGE_NAME)-$(package.version)-src.tar$(COMPRESS_EXT)
-
-$(DOC_DIR)/index.html: | $(BUILD_DIR) $(JAVA_PACKAGES_LIST)
-	@$(JAVADOC) $(JAVADOC_OPTIONS) -d '$(DOC_DIR)' $(DOC_CLASSPATH) \
+$(DOC_DIR)/index.html: $(SOURCE_FILES) | $(BUILD_DIR) $(JAVA_PACKAGES_LIST)
+	@$(RM) -r '$(dir $@)' && \
+	$(JAVADOC) $(JAVADOC_OPTIONS) -d '$(DOC_DIR)' $(DOC_CLASSPATH) \
 	  -overview '@top_srcdir@/doc/overview.html' @$(JAVA_PACKAGES_LIST)
 
+.PHONY: doc
+
 doc: $(DOC_DIR)/index.html
+
+
+############
+# Clean-up #
+############
+
+.PHONY: clean distclean
+
+# Everything this Makefile builds is stored under $(BUILD_DIR)
+# or $(PACKAGE_DIR)
+clean:
+	-$(RM) -r '$(BUILD_DIR)' '$(PACKAGE_DIR)'
+
+distclean: clean
+	-$(RM) Makefile config.status config.cache config.log \
+	       configure.lineno config.status.lineno config.h

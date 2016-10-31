@@ -269,18 +269,24 @@ into the following parts:
 5. Java components
 6. Native components
 7. Components' build.mk files
-8. Packaging
-9. More targets
+8. Binary packages
+9. Run tests
+10. Source packages
+11. Documentation
+12. Clean-up
 
 However, the parts you may need to tweak are:
 
 1. Tools
 2. Project properties and structure
 3. Components' build.mk files
-4. Packaging
-5. More targets
+4. Binary packages
+5. Run tests
+6. Source packages
+7. Documentation
+8. Clean-up
 
-"Tools" fill up a number of Make variables with the corresponding
+"Tools" fills up a number of Make variables with the corresponding
 variables defined in `configure.ac`.
 You may need to add some extra variables for native libraries your
 project depends on.
@@ -295,14 +301,43 @@ For example, the sample project stores the Java source files in the
 `src` subdirectory under each component's base directory.
 To use another subdirectory, redefine the `SOURCES_PATH` variable.
 
-"Components' build.mk files" contains a list of included `build.mk`
-files, one for each project's component.
-More on the `build.mk` files in the next section.
+The "build.mk's variables and macros", "External Java libraries", "Java
+components" and "Native components" parts define several targets, most
+of which are for internal use and are not meant to be invoked directly
+from the command line, except for the following ones:
 
-"Packaging" is meant to contain the instructions required to build one
-or more packages.
-For the structure of a package may be quite complex, I chose to dedicate
-it a specific section of `Makefile.in`.
+* `compile`: compiles all the Java classes and native object files
+* `check-<componentname>`: runs the test suite of the specified
+  component
+
+"Components' build.mk files" contains a list of included `build.mk`
+files, one for each project's component -- more on the `build.mk` files
+in the next section.
+It defines the following target:
+
+* `components`: builds all the components' JAR archives and native
+  libraries
+
+The remaining parts add more targets to the ones described above.
+Some of them are the "standard targets" any GNU Build System compliant
+`Makefile` must support.
+I chose them just to give `Makefile.in` some resemblance to Automake
+produced `Makefile`s, but you can really define whatever targets you
+want or need.
+
+"Binary packages" is meant to contain the instructions required to build
+one or more binary packages.
+It defines the following non-standard target:
+
+* `bin-packages`: builds the binary package(s)
+
+And the following standard targets:
+
+* `all` (also the default target): builds the binary package(s), in
+  fact, it is just an alias for `bin-packages`
+* `install` and `install-strip`: for there's nothing to install they are
+  just more aliases for `bin-packages`
+* `uninstall`: this target will do nothing, for nothing is installed
 
 For the sake of illustration, the sample `Makefile.in` contains
 instructions to build a `.tar.gz` archive (if the `gzip` utility is
@@ -310,52 +345,44 @@ available, or a plain `.tar` if not) containing some of the project's
 components, a README, a script to start the application and the Javadoc
 documentation.
 You may adapt it to your needs or write your own instructions from
-scratch, but, whichever path you decide to take, keep in mind that to
-add dependencies between the packaging targets and the projects'
+scratch, but, whichever path you decide to follow, keep in mind that to
+add dependencies between the binary package(s) and the projects'
 components add as many `$(<componentname>.buildname)` as required to the
-target's prerequisites (more on this in the next section).
+binary packages' prerequisites (more on this in the next section).
 
-The sample `Makefile.in` defines several targets, most of which are for
-internal use and are not meant to be invoked directly from the command
-line, except for the following ones:
+"Run tests" contains the rules required to run *all* the test suites
+(the rules to run a specific test suite are defined in the "Java
+components" part).
+If your project doesn't contain tests, you may remove this section.
+It defines the following standard targets:
 
-* `compile`: will compile all the Java classes and native object files
-* `check-<componentname>`: will run the test suite of the specified
-  component
-* `components`: will build all the components' JAR archives and native
-  libraries
-* `package`: will build all the packages defined in the "Packaging"
-  section of the `Makefile.in`
-
-"More targets" is intended to add more targets to the ones described
-above.
-The provided `Makefile.in` defines the "standard targets" any GNU Build
-System compliant `Makefile` must support.
-I chose them just to give `Makefile.in` some resemblance to Automake
-produced `Makefile`s, but you can really define whatever targets you
-want.
-
-The standard targets are:
-
-* `all` (also the default target): builds the package(s), in fact, it is
-  just an alias for the package target
-* `install` and `install-strip`: for there's nothing to install they are
-  just more aliases for the package target
-* `uninstall`: this target will do nothing, for nothing is installed
-* `clean`: removes any file built by `make` -- to keep things as simple
-  as possible, the sample project stores all the generated files in two
-  directories, `$(BUILD_DIR)` and `$(PACKAGE_DIR)`, making the `clean`
-  target as simple as a single `rm -rf`
-* `distclean`: same as `clean` but will also remove any file built by
-  `configure`
 * `check`: runs all the test suites -- if you only want to run a
   specific test suite, use the `check-<componentname>` target instead
 * `installcheck`: should run a test suite against the installed files,
   but given that nothing is installed, it is just an alias for `check`
+
+"Source packages" contains the rules to build one or more source
+packages.
+It defines the following standard target:
+
 * `dist`: builds a TAR package containing the source code and all the
   files needed to build from source
-* `doc`: this is not a standard target, but I added it to build some
-  Javadoc-style documentation
+
+"Documentation" contains the rules to build the Javadoc documentation.
+It defines the following non-standard target:
+
+* `doc`: builds the Javadoc-style documentation
+
+The last part, "Clean-up", contains the rules to clean-up the build
+tree.
+It defines the following standard targets:
+
+* `clean`: removes any file built by `make` -- to keep things as simple
+  as possible, the sample project stores all the generated files in two
+  directories, `$(BUILD_DIR)` and `$(PACKAGE_DIR)`, making the `clean`
+  target as simple as a single `rm -rf`
+* `distclean`: same as `clean` but will also remove any file generated
+  by `configure`
 
 ### The build.mk ###
 The `Makefile.in` deals with global properties of the project, whereas
