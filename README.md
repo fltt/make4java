@@ -557,47 +557,27 @@ variables are automatically added to `RESOURCE_PLACEHOLDERS`.
 Any other variable you may want to be expanded during filtering must be
 explicitly added to `RESOURCE_PLACEHOLDERS`.
 
-Supported GNU Make versions
----------------------------
-To improve performances, the `Makefile.in` makes use of the `file`
-function, found in GNU Make version 4.0 and successive.
+GNU Make compatibility
+----------------------
+To improve performances, `Makefile.in` makes use of the `file` function,
+available in GNU Make version 4.0 or greater.
 
-However, if version 4.0 is not available to you, there is still hope.
-The `file` function is used in rules like the following:
+However, it looks like many systems today are still using GNU Make
+version 3.81 -- a ten years old version (e.g., Mac OS X and Android).
+To allow you to use **make4java** in those systems, `Makefile.in`
+contains instructions to detect GNU Make version and, in case it is
+older than version 4.0, resort to alternative recipes wherever the
+`file` function is employed.
 
-```
-.PHONY: $(JAVAC_SOURCEPATHS_LIST)
+Note that those alternative recipes are quite inefficient and for big
+projects they may slow down the build process considerably.
+So, for big projects, you should consider installing a more recent
+version of GNU Make.
 
-$(JAVAC_SOURCEPATHS_LIST): | $(BUILD_DIR)
-        @echo 'Building $@' \
-        $(file >$@) \
-        $(foreach var,$(SOURCE_DIRECTORIES),$(file >>$@,-sourcepath $(var)$(SOURCES_PATH)))
-```
-
-The are several of them.
-All you need to do to fix them is to rewrite them as:
-
-```
-.PHONY: clean_javac_sourcepaths_list $(JAVAC_SOURCEPATHS_LIST)
-
-clean_javac_sourcepaths_list: | $(BUILD_DIR)
-        @: >'$(JAVAC_SOURCEPATHS_LIST)'
-
-$(JAVAC_SOURCEPATHS_LIST): | clean_javac_sourcepaths_list
-        @echo "Building $@" \
-        $(foreach var,$(SOURCE_DIRECTORIES),$(shell echo '-sourcepath $(var)$(SOURCES_PATH)' >>'$@'))
-```
-
-> **NOTE**: Remember that the white spaces indenting the recipes are not
-> SPACE characters but TAB characters.
-
-Having done this for each rule that employ the `file` function, you
-should have now a `Makefile.in` that works with previous versions of
-`make` as old as 3.81 and maybe older.
-
-> **NOTE**: I said *should* above, because I haven't tested it, so there
-> is still a chance that after having done as told, you may stil need
-> version 4.0.
+Also note that versions older than 3.81 won't work as they lack other
+required functions (e.g., version 3.80 lacks the `lastword` function and
+version 3.79 lacks the `eval` function too), whereas version 3.82 should
+work without issues.
 
 License
 -------

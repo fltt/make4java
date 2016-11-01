@@ -66,6 +66,9 @@ SED = @SED@
 TAR = @am__tar@
 XARGS = @XARGS@
 
+ECHO_C = @ECHO_C@
+ECHO_N = @ECHO_N@
+
 # The followings expand, respectively, to the gzip command and '.gz',
 # if gzip is available, or to 'cat' and the empty string if not
 COMPRESS = @COMPRESS@
@@ -87,6 +90,23 @@ LIBS = @LIBS@
 # Options for the Java API Documentation Generator
 # NOTE: '-locale', if present, must be the first one
 JAVADOC_OPTIONS = -locale en_GB -encoding UTF-8 -charset UTF-8 -protected
+
+# If GNU Make version is greater than or equal to 4.0, then it has the
+# $(file ...) function, else we must resort to more convoluted and less
+# efficient substitutes.
+# NOTE: The $(file ...) function is employed to write lists of source,
+#       resource, Java class filenames and other items into files. In
+#       case it is missing, the substitutes will use the shell to write
+#       those items into the files. However, for those lists could be
+#       really long (longer than the maximum command line length) a
+#       single item is written per shell invocation. This is quite
+#       inefficient but ensures that each command executed won't exceed
+#       the maximum command line length.
+ifeq ($(filter $(firstword $(subst ., ,$(MAKE_VERSION))),0 1 2 3),)
+HAS_FILE = yes
+else
+HAS_FILE = no
+endif
 
 
 ####################################
@@ -323,7 +343,7 @@ LIBRARIES := $(shell test -d '$(EXTERNAL_LIBRARIES_DIR)' && $(FIND) '$(EXTERNAL_
 
 # Arguments:
 #   $(1) - parsed library name (in the <libname>:<version> format)
-define PARSE_LIB_AND_VER =
+define PARSE_LIB_AND_VER
 
 MK_NAME := $(word 1,$(subst :, ,$(1)))
 MK_VERSION := $(word 2,$(subst :, ,$(1)))
@@ -399,7 +419,7 @@ DOC_CLASSPATH := -classpath '$(subst $(empty) $(empty),:,$(strip $(LIBRARIES)))'
 
 # Arguments:
 #   $(1) - component name
-define CHECK_INCLUDED =
+define CHECK_INCLUDED
 
 ifndef $(1).jarname
 MISSING_INCLUDED_COMPONENTS += $(1)
@@ -482,7 +502,7 @@ CLASSNAME_TO_CLASSFILE = $(patsubst %,$(CLASSES_DIR)/%.class,$(subst .,/,$(1)))
 #          this component's JAR archive
 #   $(8) - additional classes (from other components, in
 #          the package.subpackage.classname format)
-define BUILD_MAKE_RULES =
+define BUILD_MAKE_RULES
 
 ifeq ($(1),)
 $$(error Missing jar basename)
@@ -548,7 +568,7 @@ endef # BUILD_MAKE_RULES
 #   $(6) - resource files list
 #   $(7) - list of component's names tests depend on (at run-time)
 #   $(8) - main class name (in the package.subpackage.classname format)
-define BUILD_TEST_MAKE_RULES =
+define BUILD_TEST_MAKE_RULES
 
 ifeq ($(1),)
 $$(error Missing jar basename)
@@ -611,8 +631,20 @@ endef # BUILD_TEST_MAKE_RULES
 .PHONY: $(JAVAC_SOURCEPATH_LIST)
 
 $(JAVAC_SOURCEPATH_LIST): | $(BUILD_DIR)
+ifeq ($(strip $(SOURCE_DIRECTORIES) $(TEST_SOURCE_DIRECTORIES)),)
+	@echo 'Building $@'; \
+	: >'$@'
+else ifeq ($(HAS_FILE),yes)
 	@echo 'Building $@' \
-	$(file >$@,-sourcepath $(subst $(empty) $(empty),:,$(addsuffix $(SOURCES_PATH),$(strip $(SOURCE_DIRECTORIES) $(TEST_SOURCE_DIRECTORIES)))))
+	$(file >$@,-sourcepath $(subst $(empty) $(empty),:,$(addsuffix $(SOURCES_PATH),$(SOURCE_DIRECTORIES) $(TEST_SOURCE_DIRECTORIES))))
+else
+	@echo 'Building $@'; \
+	$(shell echo $(ECHO_N) "x-sourcepath $(ECHO_C)" >'$@.tmp') \
+	$(foreach var,$(SOURCE_DIRECTORIES) $(TEST_SOURCE_DIRECTORIES),$(shell echo $(ECHO_N) "$(var)$(SOURCES_PATH):$(ECHO_C)" >>'$@.tmp')) \
+	$(shell echo "" >>'$@.tmp') \
+	cat '$@.tmp' | $(SED) '1s,^x\(.*\):$$,\1,' >'$@' && \
+	$(RM) '$@.tmp'
+endif
 
 
 # Store the list of all the Java source files -- the .PHONY special
@@ -621,9 +653,15 @@ $(JAVAC_SOURCEPATH_LIST): | $(BUILD_DIR)
 .PHONY: $(SOURCE_FILES_FULL_LIST)
 
 $(SOURCE_FILES_FULL_LIST): | $(BUILD_DIR)
+ifeq ($(HAS_FILE),yes)
 	@echo 'Building $@' \
 	$(file >$@) \
 	$(foreach var,$(SOURCE_FILES) $(TEST_SOURCE_FILES),$(file >>$@,$(var)))
+else
+	@echo 'Building $@' \
+	$(shell : >'$@') \
+	$(foreach var,$(SOURCE_FILES) $(TEST_SOURCE_FILES),$(shell echo '$(var)' >>'$@'))
+endif
 
 
 # Clean-up the list of to-be-compiled Java source files (it will be
@@ -654,9 +692,15 @@ $(CLASSES_ALIAS_DIR)/%.class: | $(JAVAC_SOURCE_FILES_LIST)
 .PHONY: $(RESOURCES_FILTER_SCRIPT)
 
 $(RESOURCES_FILTER_SCRIPT): | $(BUILD_DIR)
+ifeq ($(HAS_FILE),yes)
 	@echo 'Building $@' \
 	$(file >$@) \
 	$(foreach var,$(RESOURCE_PLACEHOLDERS),$(file >>$@,s|$${$(var)}|$($(var))|g))
+else
+	@echo 'Building $@' \
+	$(shell : >'$@') \
+	$(foreach var,$(RESOURCE_PLACEHOLDERS),$(shell echo 's|$${$(var)}|$($(var))|g' >>'$@'))
+endif
 
 
 # This rule applies the aforementioned sed script to the resource files.
@@ -808,7 +852,7 @@ CLASSNAME_TO_FULL_INCLUDEFILE = $(patsubst %,$(INCLUDE_DIR)/%.h,$(subst .,_,$(1)
 #   $(2) - component base directory (must end with '/')
 #   $(3) - component-specific CFLAGS
 #   $(4) - C source file name
-define BUILD_NATIVE_COMPILE_RULES =
+define BUILD_NATIVE_COMPILE_RULES
 
 # The conditional avoids to compile the Java code (to build the JNI
 # header files the .d file depends on) when executing targets that do
@@ -849,7 +893,7 @@ endef # BUILD_NATIVE_COMPILE_RULES
 #   $(8) - javah classes (in the package.subpackage.classname format)
 #   $(9) - additional object files (from other components, in
 #          the native-library-name/object-file-name.o format)
-define BUILD_NATIVE_MAKE_RULES =
+define BUILD_NATIVE_MAKE_RULES
 
 ifeq ($(1),)
 $$(error Missing library basename)
@@ -896,6 +940,7 @@ endef # BUILD_NATIVE_MAKE_RULES
 # the recompiled classes will be processed through javah
 
 $(JAVAH_CLASSES_LIST): | $(INCLUDE_DIR)
+ifeq ($(HAS_FILE),yes)
 	@echo 'Building $@'; \
 	$(file >$@) \
 	$(foreach var,$?,$(file >>$@,$(call CLASSFILE_TO_CLASSNAME,$(var)))) \
@@ -904,6 +949,16 @@ $(JAVAH_CLASSES_LIST): | $(INCLUDE_DIR)
 	  echo 'cat $@ | $(XARGS) $(JAVAH) -d $(INCLUDE_DIR) $(CLASSPATH)' && \
 	  cat '$@' | $(XARGS) $(JAVAH) -d '$(INCLUDE_DIR)' $(CLASSPATH); \
 	fi
+else
+	@echo 'Building $@'; \
+	$(shell : >'$@') \
+	$(foreach var,$?,$(shell echo '$(call CLASSFILE_TO_CLASSNAME,$(var))' >>'$@')) \
+	if test -s '$@'; then \
+	  echo 'Building JNI headers'; \
+	  echo 'cat $@ | $(XARGS) $(JAVAH) -d $(INCLUDE_DIR) $(CLASSPATH)' && \
+	  cat '$@' | $(XARGS) $(JAVAH) -d '$(INCLUDE_DIR)' $(CLASSPATH); \
+	fi
+endif
 
 
 ##############################
@@ -1005,7 +1060,7 @@ INTO_STAGE = $(addprefix $(STAGE_DIR)/$(TAR_ROOT_DIR)$(1)/,$(notdir $(2)))
 #   $(1) - build list files
 #   $(2) - stage files variable name
 #   $(3) - stage subdirectory (must begin with '/' or be empty)
-define ADD_PACKAGE_RULES =
+define ADD_PACKAGE_RULES
 
 $(2) += $$(call INTO_STAGE,$(3),$(1))
 
@@ -1017,17 +1072,17 @@ $$(foreach var,$(1),$$(eval $$(call INTO_STAGE,$(3),$$(var)): $$(var) | $(STAGE_
 endef # ADD_PACKAGE_RULES
 
 
-# 'ln' is faster than 'cp -fpR', but will fail if source and build
-# trees reside in different file systems.
-$(STAGE_DIR)/$(TAR_ROOT_DIR)/%:
-	$(RM) '$@' && \
-	ln '$<' '$@'
-
 # *.sh files are treated specially: they are both filtered as resources
 # and made executable
 $(STAGE_DIR)/$(TAR_ROOT_DIR)/%.sh: | $(RESOURCES_FILTER_SCRIPT)
 	$(SED) -f '$(RESOURCES_FILTER_SCRIPT)' '$<' >'$@' && \
 	chmod a+x '$@'
+
+# 'ln' is faster than 'cp -fpR', but will fail if source and build
+# trees reside in different file systems.
+$(STAGE_DIR)/$(TAR_ROOT_DIR)/%:
+	$(RM) '$@' && \
+	ln '$<' '$@'
 
 # Javadoc documentation requires a specific rule
 # NOTE: Can't use hard links here -- they don't work with directories
@@ -1122,9 +1177,31 @@ dist: $(PACKAGE_DIR)/$(TAR_ROOT_DIR)-src.tar$(COMPRESS_EXT)
 .PHONY: $(JAVA_PACKAGES_LIST)
 
 $(JAVA_PACKAGES_LIST): | $(BUILD_DIR)
+ifeq ($(strip $(SOURCE_DIRECTORIES)),)
+ifeq ($(HAS_FILE),yes)
 	@echo 'Building $@' \
-	$(file >$@,-sourcepath $(subst $(empty) $(empty),:,$(addsuffix $(SOURCES_PATH),$(strip $(SOURCE_DIRECTORIES))))) \
+	$(file >$@) \
 	$(foreach var,$(sort $(JAVA_PACKAGES)),$(file >>$@,$(var)))
+else
+	@echo 'Building $@'; \
+	$(shell : >'$@') \
+	$(foreach var,$(sort $(JAVA_PACKAGES)),$(shell echo '$(var)' >>'$@'))
+endif
+else
+ifeq ($(HAS_FILE),yes)
+	@echo 'Building $@' \
+	$(file >$@,-sourcepath $(subst $(empty) $(empty),:,$(addsuffix $(SOURCES_PATH),$(SOURCE_DIRECTORIES)))) \
+	$(foreach var,$(sort $(JAVA_PACKAGES)),$(file >>$@,$(var)))
+else
+	@echo 'Building $@'; \
+	$(shell echo $(ECHO_N) "x-sourcepath $(ECHO_C)" >'$@.tmp') \
+	$(foreach var,$(SOURCE_DIRECTORIES),$(shell echo $(ECHO_N) "$(var)$(SOURCES_PATH):$(ECHO_C)" >>'$@.tmp')) \
+	$(shell echo "" >>'$@.tmp') \
+	$(foreach var,$(sort $(JAVA_PACKAGES)),$(shell echo '$(var)' >>'$@.tmp')) \
+	cat '$@.tmp' | $(SED) '1s,^x\(.*\):$$,\1,' >'$@' && \
+	$(RM) '$@.tmp'
+endif
+endif
 
 $(DOC_DIR)/index.html: $(SOURCE_FILES) | $(BUILD_DIR) $(JAVA_PACKAGES_LIST)
 	@$(RM) -r '$(dir $@)' && \
