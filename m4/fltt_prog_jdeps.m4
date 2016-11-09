@@ -13,48 +13,42 @@
 
 # FLTT_PROG_JDEPS
 # ---------------
-# Locate the Java class dependency analyzer and verify that it is
-# working. We cannot just locate it as some OS makes use of wrapper
-# scripts which may fail to work under several circumstances.
+# Locate the Java class dependency analyzer and verify that it works.
+# We cannot just locate it as some OS makes use of wrapper scripts which
+# may fail to work under several circumstances.
 AC_DEFUN([FLTT_PROG_JDEPS],
          [AC_REQUIRE([AC_PROG_SED])[]dnl
-AC_REQUIRE([FLTT_PROG_JAVAC])[]dnl
 AC_ARG_VAR([JAVA_PREFIX], [path to the Java home directory])[]dnl
 m4_define([fltt_jdeps_test],
-          [AS_IF([test ! -f Conftest1.class || test ! -f Conftest2.class],
-                 [AS_IF([test "x$JAVAC" = x],
-                        [AS_ECHO(["$as_me: jdeps test failed:"]) >&AS_MESSAGE_LOG_FD
-AS_ECHO(["  cannot proceed without a working Java compiler"]) >&AS_MESSAGE_LOG_FD],
-                        [[cat >Conftest1.java <<EOF
-public class Conftest1 {
-    private int v1 = 1;
-    public int value() {
-        return v1;
-    }
-}
-EOF
-cat >Conftest2.java <<EOF
-public class Conftest2 extends Conftest1 {
-    private int v2 = 2;
-    public int value() {
-        return v2;
-    }
-}
-EOF]
-AS_IF([$JAVAC Conftest1.java Conftest2.java >/dev/null 2>&1 &&
-       test -f Conftest1.class && test -f Conftest2.class], [],
-      [AS_ECHO(["$as_me: failed programs were:"]) >&AS_MESSAGE_LOG_FD
-$SED 's/^/| /' Conftest1.java >&AS_MESSAGE_LOG_FD
-AS_ECHO(["and:"]) >&AS_MESSAGE_LOG_FD
-$SED 's/^/| /' Conftest2.java >&AS_MESSAGE_LOG_FD])])])
-AS_IF([test -f Conftest1.class && test -f Conftest2.class],
-      [fltt_jdepsout=`$ac_path_JDEPS -v Conftest1.class Conftest2.class 2>/dev/null | $SED -n '/^  *Conftest2 *-> *Conftest1 *.*$/p'`
+          [dnl
+# public class Conftest1 {
+#     public int value() {
+#         return 1;
+#     }
+# }
+# The following class file was generated from the above Java source file.
+printf "\312\376\272\276\0\0\0002\0\14\12\0\3\0\11\7\0\12\7\0\13\1\0\6\74" >Conftest1.class
+printf "init\76\1\0\3\50\51V\1\0\4Code\1\0\5value\1\0\3\50\51I\14\0\4\0\5" >>Conftest1.class
+printf "\1\0\11Conftest1\1\0\20java\57lang\57Object\0\41\0\2\0\3\0\0\0\0" >>Conftest1.class
+printf "\0\2\0\1\0\4\0\5\0\1\0\6\0\0\0\21\0\1\0\1\0\0\0\5\52\267\0\1\261" >>Conftest1.class
+printf "\0\0\0\0\0\1\0\7\0\10\0\1\0\6\0\0\0\16\0\1\0\1\0\0\0\2\4\254\0\0" >>Conftest1.class
+printf "\0\0\0\0" >>Conftest1.class
+# public class Conftest2 extends Conftest1 {
+#     public int value() {
+#         return 2;
+#     }
+# }
+# The following class file was generated from the above Java source file.
+printf "\312\376\272\276\0\0\0002\0\14\12\0\3\0\11\7\0\12\7\0\13\1\0\6\74" >Conftest2.class
+printf "init\76\1\0\3\50\51V\1\0\4Code\1\0\5value\1\0\3\50\51I\14\0\4\0\5" >>Conftest2.class
+printf "\1\0\11Conftest2\1\0\11Conftest1\0\41\0\2\0\3\0\0\0\0\0\2\0\1\0\4" >>Conftest2.class
+printf "\0\5\0\1\0\6\0\0\0\21\0\1\0\1\0\0\0\5\52\267\0\1\261\0\0\0\0\0\1" >>Conftest2.class
+printf "\0\7\0\10\0\1\0\6\0\0\0\16\0\1\0\1\0\0\0\2\5\254\0\0\0\0\0\0" >>Conftest2.class
+fltt_jdepsout=`$ac_path_JDEPS -v Conftest1.class Conftest2.class 2>/dev/null | $SED -n '/^  *Conftest2 *-> *Conftest1 *.*$/p'`
 AS_IF([test "x$fltt_jdepsout" != x],
-       [ac_cv_path_JDEPS="$ac_path_JDEPS" ac_path_JDEPS_found=:],
-       [AS_ECHO(["$as_me: jdeps test failed:"]) >&AS_MESSAGE_LOG_FD
-$SED 's/^/| /' Conftest1.java >&AS_MESSAGE_LOG_FD
-AS_ECHO(["and:"]) >&AS_MESSAGE_LOG_FD
-$SED 's/^/| /' Conftest2.java >&AS_MESSAGE_LOG_FD])])])dnl
+      [ac_cv_path_JDEPS="$ac_path_JDEPS" ac_path_JDEPS_found=:],
+      [AS_ECHO(["$as_me: jdeps test failed"]) >&AS_MESSAGE_LOG_FD])
+rm -f Conftest1.class Conftest2.class])dnl
 AS_IF([test "x$JAVA_PREFIX" = x],
       [AC_CACHE_CHECK([for the Java class dependency analyzer],
                       [ac_cv_path_JDEPS],
@@ -68,7 +62,6 @@ AS_IF([test "x$JAVA_PREFIX" = x],
                                                    [ac_cv_path_JDEPS=no],
                                                    ["$JAVA_PREFIX/bin"])])])
 m4_undefine([fltt_jdeps_test])dnl
-rm -f Conftest1.java Conftest2.java Conftest1.class Conftest2.class
 AS_IF([test "x$ac_cv_path_JDEPS" != xno],
       [JDEPS="$ac_cv_path_JDEPS"])
 AC_SUBST([JDEPS])[]dnl

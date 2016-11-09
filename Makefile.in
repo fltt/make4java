@@ -52,6 +52,7 @@ JAVAC = @JAVAC@
 JAVADOC = @JAVADOC@
 JAVAH = @JAVAH@
 JDEPS = @JDEPS@
+JAVA_PATH_SEPARATOR = @JAVA_PATH_SEPARATOR@
 
 # Common tools -- every UNIX-like OS should have these (and a
 # Bourne-like shell)
@@ -408,11 +409,11 @@ MISSING_INCLUDED_COMPONENTS :=
 
 # Classpath for javac and javah
 # NOTE: The "empty" variable must NOT be defined
-CLASSPATH := -classpath '$(subst $(empty) $(empty),:,$(strip $(CLASSES_DIR) $(LIBRARIES)))'
+CLASSPATH := -classpath '$(subst $(empty) $(empty),$(JAVA_PATH_SEPARATOR),$(strip $(CLASSES_DIR) $(LIBRARIES)))'
 
 # Classpath for javadoc
 # NOTE: The "empty" variable must NOT be defined
-DOC_CLASSPATH := -classpath '$(subst $(empty) $(empty),:,$(strip $(LIBRARIES)))'
+DOC_CLASSPATH := -classpath '$(subst $(empty) $(empty),$(JAVA_PATH_SEPARATOR),$(strip $(LIBRARIES)))'
 
 
 # Verify the specified library has been defined
@@ -617,7 +618,7 @@ $$(value $(1).buildname): $$(call SOURCES_TO_CLASSES,$(4),$(5)) \
 
 check-$(1): $$(value $(1).buildname) \
             $$(foreach var,$(7),$$(value $$(var).buildname))
-	$(JAVA) '-Djava.class.path=$$(subst $$(empty) $$(empty),:,$$(strip $$(filter %.jar,$$^)))' \
+	$(JAVA) '-Djava.class.path=$$(subst $$(empty) $$(empty),$(JAVA_PATH_SEPARATOR),$$(strip $$(filter %.jar,$$^)))' \
 	  '-Djava.library.path=$(NATIVE_DIR)' $(8)
 
 endif # eq ($(3),yes)
@@ -636,13 +637,13 @@ ifeq ($(strip $(SOURCE_DIRECTORIES) $(TEST_SOURCE_DIRECTORIES)),)
 	: >'$@'
 else ifeq ($(HAS_FILE),yes)
 	@echo 'Building $@' \
-	$(file >$@,-sourcepath $(subst $(empty) $(empty),:,$(addsuffix $(SOURCES_PATH),$(SOURCE_DIRECTORIES) $(TEST_SOURCE_DIRECTORIES))))
+	$(file >$@,-sourcepath $(subst $(empty) $(empty),$(JAVA_PATH_SEPARATOR),$(addsuffix $(SOURCES_PATH),$(SOURCE_DIRECTORIES) $(TEST_SOURCE_DIRECTORIES))))
 else
 	@echo 'Building $@'; \
 	$(shell echo $(ECHO_N) "x-sourcepath $(ECHO_C)" >'$@.tmp') \
-	$(foreach var,$(SOURCE_DIRECTORIES) $(TEST_SOURCE_DIRECTORIES),$(shell echo $(ECHO_N) "$(var)$(SOURCES_PATH):$(ECHO_C)" >>'$@.tmp')) \
+	$(foreach var,$(SOURCE_DIRECTORIES) $(TEST_SOURCE_DIRECTORIES),$(shell echo $(ECHO_N) "$(var)$(SOURCES_PATH)$(JAVA_PATH_SEPARATOR)$(ECHO_C)" >>'$@.tmp')) \
 	$(shell echo "" >>'$@.tmp') \
-	cat '$@.tmp' | $(SED) '1s,^x\(.*\):$$,\1,' >'$@' && \
+	cat '$@.tmp' | $(SED) '1sa^x\(.*\)$(JAVA_PATH_SEPARATOR)$$a\1a' >'$@' && \
 	$(RM) '$@.tmp'
 endif
 
@@ -1190,15 +1191,15 @@ endif
 else
 ifeq ($(HAS_FILE),yes)
 	@echo 'Building $@' \
-	$(file >$@,-sourcepath $(subst $(empty) $(empty),:,$(addsuffix $(SOURCES_PATH),$(SOURCE_DIRECTORIES)))) \
+	$(file >$@,-sourcepath $(subst $(empty) $(empty),$(JAVA_PATH_SEPARATOR),$(addsuffix $(SOURCES_PATH),$(SOURCE_DIRECTORIES)))) \
 	$(foreach var,$(sort $(JAVA_PACKAGES)),$(file >>$@,$(var)))
 else
 	@echo 'Building $@'; \
 	$(shell echo $(ECHO_N) "x-sourcepath $(ECHO_C)" >'$@.tmp') \
-	$(foreach var,$(SOURCE_DIRECTORIES),$(shell echo $(ECHO_N) "$(var)$(SOURCES_PATH):$(ECHO_C)" >>'$@.tmp')) \
+	$(foreach var,$(SOURCE_DIRECTORIES),$(shell echo $(ECHO_N) "$(var)$(SOURCES_PATH)$(JAVA_PATH_SEPARATOR)$(ECHO_C)" >>'$@.tmp')) \
 	$(shell echo "" >>'$@.tmp') \
 	$(foreach var,$(sort $(JAVA_PACKAGES)),$(shell echo '$(var)' >>'$@.tmp')) \
-	cat '$@.tmp' | $(SED) '1s,^x\(.*\):$$,\1,' >'$@' && \
+	cat '$@.tmp' | $(SED) '1sa^x\(.*\)$(JAVA_PATH_SEPARATOR)$$a\1a' >'$@' && \
 	$(RM) '$@.tmp'
 endif
 endif

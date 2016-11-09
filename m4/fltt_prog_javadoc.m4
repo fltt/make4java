@@ -13,9 +13,9 @@
 
 # FLTT_PROG_JAVADOC
 # -----------------
-# Locate the Java API documentation generator and verify that it is
-# working. We cannot just locate it as some OS makes use of wrapper
-# scripts which may fail to work under several circumstances.
+# Locate the Java API documentation generator and verify that it works.
+# We cannot just locate it as some OS makes use of wrapper scripts which
+# may fail to work under several circumstances.
 AC_DEFUN([FLTT_PROG_JAVADOC],
          [AC_REQUIRE([AC_PROG_SED])[]dnl
 AC_ARG_VAR([JAVA_PREFIX], [path to the Java home directory])[]dnl
@@ -46,5 +46,5 @@ m4_undefine([fltt_javadoc_test])dnl
 AS_IF([test "x$ac_cv_path_JAVADOC" != xno],
       [JAVADOC="$ac_cv_path_JAVADOC"])
 AC_SUBST([JAVADOC])[]dnl
-AC_ARG_VAR([JAVADOC], [Java API documentation generator])dnl
+AC_ARG_VAR([JAVADOC], [Java API documentation generator])[]dnl
 ])# FLTT_PROG_JAVADOC

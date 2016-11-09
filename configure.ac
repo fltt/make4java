@@ -72,6 +72,7 @@ AS_IF([test "x$JAR" = x],
 FLTT_PROG_JAVA
 AS_IF([test "x$JAVA" = x],
       [missing_programs="$missing_programs java"])
+FLTT_PROG_JAVA_PATHSEP
 FLTT_PROG_JAVADOC
 AS_IF([test "x$JAVADOC" = x],
       [missing_programs="$missing_programs javadoc"])

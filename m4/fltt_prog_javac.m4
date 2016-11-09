@@ -13,7 +13,7 @@
 
 # FLTT_PROG_JAVAC
 # ---------------
-# Locate the Java compiler and verify that it is working. We cannot just
+# Locate the Java compiler and verify that it works. We cannot just
 # locate it as some OS makes use of wrapper scripts which may fail to
 # work under several circumstances.
 AC_DEFUN([FLTT_PROG_JAVAC],
@@ -50,5 +50,5 @@ m4_undefine([fltt_compilers_list])dnl
 AS_IF([test "x$ac_cv_path_JAVAC" != xno],
       [JAVAC="$ac_cv_path_JAVAC"])
 AC_SUBST([JAVAC])[]dnl
-AC_ARG_VAR([JAVAC], [Java programming language compiler])dnl
+AC_ARG_VAR([JAVAC], [Java programming language compiler])[]dnl
 ])# FLTT_PROG_JAVAC
