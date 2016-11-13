@@ -3,7 +3,7 @@ A Makefile for Java projects
 This is about an alternative way to manage the build process of Java
 projects.
 
-If you know how to use Autoconf and GNU Make and are tired of the
+If you know how to use the Autotools and GNU Make and are tired of the
 slowness and clumsiness of the mainstream tools used to manage Java
 projects (e.g. `maven`, `ant`, etc.), this project may help you take
 full control of your own projects and drastically reduce the time
@@ -14,9 +14,9 @@ required to compile them.
 
 How?
 ----
-**make4java** is not a new tool you have to learn to use, but new way to
-use GNU Make to manage Java projects -- with particular emphasis on big
-ones -- effectively.
+**make4java** is not a new tool you have to learn to use, but a new way
+to use GNU Make to manage Java projects -- with particular emphasis on
+big ones -- effectively.
 
 A project employing the **make4java** approach will be made of:
 
@@ -42,7 +42,7 @@ To make things more tangible, a full blown sample Java project is
 provided: it uses most of the features of **make4java**.
 
 If you're lucky, you'll only need to change a few lines of the provided
-files to adapt them to your project.
+files, to adapt them to your project.
 In the worst case you will need to add more checks to the `configure.ac`
 for some external program / library your project depends on or to
 add / modify a few `Makefile.in`'s rules, e.g., modify the packaging
@@ -81,7 +81,8 @@ The sample project follows the above schema:
 To compile it, you need a JDK, version 1.3 or successive should do,
 however I've only tested version 1.6, 1.7 and 1.8 of OpenJDK.
 
-`configure.ac` requires Autoconf version 2.62 or successive.
+`configure.ac` requires Autoconf version 2.62 or successive and Libtool
+version 2.4.6 or successive.
 To build or rebuild the `configure` script run:
 
 ```
@@ -91,7 +92,7 @@ autoreconf
 Then, to build the TAR package run:
 
 ```
-configure
+./configure
 make
 ```
 
@@ -117,19 +118,21 @@ default.
 To enable them you can pass `configure` the `--enable-foo-feature`
 option.
 I've tested the native code only in Linux and FreeBSD, however adding
-more architectures should be trivial using Autoconf.
+more architectures should be trivial using Autoconf and Libtool.
 
 For a list of supported options and environment variables affecting the
 build process run:
 
 ```
-configure --help
+./configure --help
 ```
 
-> **NOTE**: The "installation directories" shown in the help screen are
-> unused, so specifying '--prefix' has no effect.
-> This is so, for I chose not to install / deploy anything but to build
-> a TAR package (which is what I usually do with my Java projects).
+> **NOTE**: Most of the "installation directories" shown in the help
+> screen are unused.
+> The only ones used are `prefix`, `execprefix` and `libdir`.
+> They are required just to give a path to Libtool's `-rpath` option,
+> that is, nothing will be ever installed in `libdir`, `prefix` nor
+> `execprefix`.
 
 The TAR archive will be created under the `packages` directory.
 The `build` directory will contain a bunch of files and directories
@@ -168,14 +171,16 @@ difference in performance between the original build system used
 
 Sure, **make4java** requires you to *manually* download all the external
 libraries, whereas `maven` downloads them automatically.
-At first this may seem to be a disadvantage, but when using `maven` with
-*big* projects, with tens or hundreds of dependencies it happens more
-often than not to include two slightly different version of the same
-library, just because they are themselves dependencies of other
+At first this may seem to be a great feature, but when using `maven`
+with *big* projects, with tens or hundreds of dependencies it happens
+more often than not to include two slightly different version of the
+same library, just because they are themselves dependencies of other
 libraries whose dependencies you can't control -- or maybe can, with
 great effort.
-If you can control which version of a library to download, then you can
-choose the most suitable *single* version of that library.
+**make4java** gives you full control about which *single* version of a
+library to use in your project.
+And if you need different versions of the same library, just download
+them all and you're done.
 
 Tweak instructions
 ------------------
@@ -249,9 +254,9 @@ For more information about Autoconf run:
 info autoconf
 ```
 
-> **NOTE**: It's a well known limit of the `Autotools` the inability to
+> **NOTE**: It's a well known limit of the Autotools the inability to
 > manage pathnames containing whitespaces and "special characters" in
-> them (see the `Autoconf` info page for a complete list).
+> them (see the Autoconf info page for a complete list).
 > So, if your project files or your tools contain special characters in
 > their names, expect troubles.
 > A simple fix is to create symbolic links -- without special characters
@@ -381,8 +386,8 @@ It defines the following standard targets:
   as possible, the sample project stores all the generated files in two
   directories, `$(BUILD_DIR)` and `$(PACKAGE_DIR)`, making the `clean`
   target as simple as a single `rm -rf`
-* `distclean`: same as `clean` but will also remove any file generated
-  by `configure`
+* `distclean`: same as `clean` but will also remove all the files
+  generated by `configure`
 
 ### The build.mk ###
 The `Makefile.in` deals with global properties of the project, whereas
@@ -445,8 +450,13 @@ The values specified for `MK_NAME` and `MK_VERSION` are used to build
 the name of the JAR archive / native library.
 The name is different depending on whether `MK_VERSION` is empty or not:
 if empty, the JAR archive will be named `<name>.jar` and the native
-library `<name>.so`, else they will be named `<name>-<version>.jar`
-and `<name>-<version>.so`.
+library `<name>.la`, else they will be named `<name>-<version>.jar`
+and `<name>-<version>.la`.
+
+> **NOTE**: `.la` is the extension used by Libtool for its generic
+> library wrapper file.
+> The actual extension used for the shared library depends on the system
+> used to build it.
 
 `MK_ENABLED` is used to control (from `configure`) which component to
 build and which to skip.
@@ -512,8 +522,8 @@ libraries too.
 Also, when defining components including other components' JAR archives
 or native libraries, care must be taken in ensuring that when writing
 the "Components' build.mk files" part of the `Makefile.in`, `build.mk`s
-of the included components are included before the including components'
-`build.mk`s.
+of the included components are included in the `Makefile.in` before the
+including components' `build.mk`s.
 If `make` fails with error "*** Missing included component(s): foo.
 Stop.", then you have misspelled `foo`'s name, forgot to include `foo`'s
 `build.mk` in your `Makefile.in` or included it *after* a component that
@@ -525,8 +535,7 @@ object files.
 These are useful when your project contains components meant to be used
 in different environments (e.g., client and server sides).
 In many cases they will share a number of common classes but you can't
-(nor wouldn't) duplicate the source files in every component sharing
-them.
+(nor wouldn't) duplicate the source files in every component using them.
 The solution is to include the source files in one component and then
 use `MK_ADDITIONAL_CLASSES` and `MK_EXTERNAL_OBJECTS` to share them with
 all the other components.
@@ -581,7 +590,6 @@ work without issues.
 
 License
 -------
-
 make4java - A Makefile for Java projects
 
 Written in 2016 by Francesco Lattanzio <franz.lattanzio@gmail.com>
@@ -594,5 +602,6 @@ warranty.
 You should have received a copy of the CC0 Public Domain Dedication
 along with this software.
 If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+
 
 [clone of the Mobicents jSS7]: http://github.com/fltt/mobicents-jss7
