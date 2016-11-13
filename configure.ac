@@ -12,6 +12,7 @@ dnl along with this software.
 dnl If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 dnl
 AC_PREREQ([2.62])
+LT_PREREQ([2.4.6])
 AC_INIT([FooBar Sample Application], [1.1.0], [franz.lattanzio@gmail.com], [foobar])
 AC_CONFIG_SRCDIR([bar/java/build.mk])
 AC_CONFIG_AUX_DIR([build-aux])
@@ -90,13 +91,17 @@ dnl       or equivalent.
 AS_IF([test "x$enable_native" = xyes],
       [AC_CANONICAL_BUILD
 AC_CANONICAL_HOST
+LT_INIT([shared])
+dnl We are going to build a shared library the JVM will "dlopen".
+dnl To build such a library, libtool requires us to specify the
+dnl '-module' option. However doing so will change the shared library
+dnl extension from the native one to '.so', causing the JVM to fail to
+dnl find it. To fix this issue we'll use the '-shrext' to restore the
+dnl native extension.
+AC_SUBST([SHREXT], [$shrext_cmds])
 AC_PROG_CC
 AC_PROG_CC_C_O
-AS_IF([eval test \$ac_cv_prog_cc_${ac_cc}_c_o != yes],
-      [AC_MSG_ERROR([your C compiler doesn't accept -c and -o together])])
 AC_PROG_CPP
-dnl AC_LANG_COMPILER is indirectly AC_REQUIRE'd by FLTT_PROG_JAVAH.
-AC_LANG_COMPILER(C)
 FLTT_PROG_JAVAH
 AS_IF([test "x$JAVAH" = x],
       [missing_programs="$missing_programs javah"],

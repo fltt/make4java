@@ -88,6 +88,22 @@ JAVAH_CPPFLAGS = @JAVAH_CPPFLAGS@
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
 
+# To build shared libraries with libtool, the directory where they will
+# be installed must be specified a link time. You can use configure's
+# '--libdir' option to change it.
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+LIB_INSTALL_PATH = @libdir@
+
+# The following are required in the libtool rules.
+# NOTE: Do not remove 'top_builddir' nor 'SHELL' as they are both used
+#       by the LIBTOOL variable.
+abs_top_builddir = @abs_top_builddir@
+top_builddir = @top_builddir@
+LIBTOOL = @LIBTOOL@
+SHELL = @SHELL@
+SHREXT = @SHREXT@
+
 # Options for the Java API Documentation Generator
 # NOTE: '-locale', if present, must be the first one
 JAVADOC_OPTIONS = -locale en_GB -encoding UTF-8 -charset UTF-8 -protected
@@ -125,13 +141,19 @@ PACKAGE_NAME := @PACKAGE_TARNAME@
 # number)
 package.version := @PACKAGE_VERSION@
 
-# The name of the directory inside the built JARs, that will hold
+# The name of the directory inside the built JARs that will hold
 # included JARs
 resources.jars := jars
 
-# The name of the directory inside the built JARs, that will hold
+# The name of the directory inside the built JARs that will hold
 # included native libraries
 resources.libs := libs
+
+# The name of the directory inside the binary package(s) that will hold
+# native libraries.
+# NOTE: For some platforms libtool requires this path to end in the same
+#       path specified in the '-rpath' option, i.e., $(LIB_INSTALL_PATH)
+native.path := $(patsubst /%,%,$(LIB_INSTALL_PATH))
 
 
 # Component-relative path to Java source files
@@ -224,7 +246,9 @@ AUTOCONF_GENERATED_FILES := configure
 AUTOCONF_DIST_FILES := configure.ac m4/fltt_prog_jar.m4 \
                        m4/fltt_prog_java.m4 m4/fltt_prog_javac.m4 \
                        m4/fltt_prog_javadoc.m4 m4/fltt_prog_javah.m4 \
-                       m4/fltt_prog_jdeps.m4 m4/tar.m4
+                       m4/fltt_prog_jdeps.m4 m4/libtool.m4 \
+                       m4/ltoptions.m4 m4/ltsugar.m4 m4/ltversion.m4 \
+                       m4/lt~obsolete.m4 m4/tar.m4
 
 # The list of files to be distributed. The components' source and
 # resources files are added automatically (see BUILD_MAKE_RULES,
@@ -232,8 +256,8 @@ AUTOCONF_DIST_FILES := configure.ac m4/fltt_prog_jar.m4 \
 DIST_FILES := config.h.in COPYING Makefile.in README.md \
               bar/java/src/dummy/bar/package-info.java bin/run.sh \
               build-aux/config.guess build-aux/config.sub \
-              build-aux/install-sh doc/README doc/overview.html \
-              foo/java/src/dummy/foo/package-info.java \
+              build-aux/install-sh build-aux/ltmain.sh doc/README \
+              doc/overview.html foo/java/src/dummy/foo/package-info.java \
               $(AUTOCONF_GENERATED_FILES) $(AUTOCONF_DIST_FILES)
 
 
@@ -272,7 +296,7 @@ $(CLASSES_DIR) $(INCLUDE_DIR) $(JARS_DIR) $(NATIVE_DIR): | $(BUILD_DIR)
 	$(MKDIR_P) '$@'
 
 $(CLASSES_ALIAS_DIR): | $(CLASSES_DIR)
-	cd '$(dir $@)' && \
+	@cd '$(dir $@)' && \
 	$(MAKE_ALIAS) '$(notdir $|)' '$(notdir $@)'
 
 
@@ -308,7 +332,7 @@ $(CLASSES_ALIAS_DIR): | $(CLASSES_DIR)
 # i.e., for each "varname" listed, the string "${varname}" will be
 # looked for in the resources and replaced with the value of
 # the variable "varname"
-RESOURCE_PLACEHOLDERS := package.name package.version resources.jars resources.libs
+RESOURCE_PLACEHOLDERS := package.name package.version resources.jars resources.libs native.path
 
 
 # The following macros are meant to be used in the components' build.mk.
@@ -360,7 +384,7 @@ RESOURCE_PLACEHOLDERS += $$(MK_NAME).version $$(MK_NAME).jarname
 # 'ln' is faster than 'cp -fpR', but will fail if source and build
 # trees reside in different file systems.
 $(BUILD_DIR)/$$(value $$(MK_NAME).jarname): $$(value $$(MK_NAME).buildname) | $(JARS_DIR)
-	$(RM) '$$@' && \
+	@$(RM) '$$@'
 	ln '$$<' '$$@'
 
 endef # PARSE_LIB_AND_VER
@@ -619,7 +643,7 @@ $$(value $(1).buildname): $$(call SOURCES_TO_CLASSES,$(4),$(5)) \
 check-$(1): $$(value $(1).buildname) \
             $$(foreach var,$(7),$$(value $$(var).buildname))
 	$(JAVA) '-Djava.class.path=$$(subst $$(empty) $$(empty),$(JAVA_PATH_SEPARATOR),$$(strip $$(filter %.jar,$$^)))' \
-	  '-Djava.library.path=$(NATIVE_DIR)' $(8)
+	  '-Djava.library.path=$(NATIVE_DIR)/.libs$(JAVA_PATH_SEPARATOR)$(NATIVE_DIR)/_libs' $(8)
 
 endif # eq ($(3),yes)
 
@@ -643,8 +667,8 @@ else
 	$(shell echo $(ECHO_N) "x-sourcepath $(ECHO_C)" >'$@.tmp') \
 	$(foreach var,$(SOURCE_DIRECTORIES) $(TEST_SOURCE_DIRECTORIES),$(shell echo $(ECHO_N) "$(var)$(SOURCES_PATH)$(JAVA_PATH_SEPARATOR)$(ECHO_C)" >>'$@.tmp')) \
 	$(shell echo "" >>'$@.tmp') \
-	cat '$@.tmp' | $(SED) '1sa^x\(.*\)$(JAVA_PATH_SEPARATOR)$$a\1a' >'$@' && \
-	$(RM) '$@.tmp'
+	cat '$@.tmp' | $(SED) '1sa^x\(.*\)$(JAVA_PATH_SEPARATOR)$$a\1a' >'$@'
+	@$(RM) '$@.tmp'
 endif
 
 
@@ -712,7 +736,7 @@ endif
 #       other for resources to keep as are.
 
 $(RESOURCES_DIR)/%: | $(RESOURCES_FILTER_SCRIPT)
-	$(MKDIR_P) '$(dir $@)' && \
+	@$(MKDIR_P) '$(dir $@)'
 	$(SED) -f '$(RESOURCES_FILTER_SCRIPT)' '$<' >'$@'
 
 
@@ -736,10 +760,10 @@ $(RESOURCES_DIR)/%: | $(RESOURCES_FILTER_SCRIPT)
 run-javac: | $(CLASSES_ALIAS_DIR) $(JAVAC_SOURCEPATH_LIST) $(SOURCE_FILES_FULL_LIST)
 ifdef JDEPS
 	@if test -s '$(JAVAC_SOURCE_FILES_LIST)'; then \
-	  echo '$(JAVAC) -Xlint:deprecation,unchecked -d $(CLASSES_DIR) $(CLASSPATH) @$(JAVAC_SOURCEPATH_LIST) @$(JAVAC_SOURCE_FILES_LIST)' && \
+	  echo '$(JAVAC) -Xlint:deprecation,unchecked -d $(CLASSES_DIR) $(CLASSPATH) @$(JAVAC_SOURCEPATH_LIST) @$(JAVAC_SOURCE_FILES_LIST)'; \
 	  $(JAVAC) -Xlint:deprecation,unchecked -d '$(CLASSES_DIR)' $(CLASSPATH) '@$(JAVAC_SOURCEPATH_LIST)' '@$(JAVAC_SOURCE_FILES_LIST)' && \
 	  if test -f '$(JAVA_DEPENDENCIES)'; then \
-	    echo 'Updating $(JAVA_DEPENDENCIES)' && \
+	    echo 'Updating $(JAVA_DEPENDENCIES)'; \
 	    $(FIND) -H '$(CLASSES_ALIAS_DIR)' -name '*.class' -cnewer '$(JAVA_DEPENDENCIES)' >'$(JAVA_DEPENDENCIES).tmp' && \
 	    cat '$(JAVA_DEPENDENCIES).tmp' | while read cf; do \
 	      cf=$$(echo $$cf | $(SED) 's|\$$|\\$$|g'); \
@@ -747,13 +771,13 @@ ifdef JDEPS
 	      mv '$(JAVA_DEPENDENCIES).bak' '$(JAVA_DEPENDENCIES)'; \
 	    done \
 	  else \
-	    echo 'Building $(JAVA_DEPENDENCIES)' && \
+	    echo 'Building $(JAVA_DEPENDENCIES)'; \
 	    $(FIND) -H '$(CLASSES_ALIAS_DIR)' -name '*.class' >'$(JAVA_DEPENDENCIES).tmp'; \
 	  fi && \
-	  echo 'BEGIN {' >'$(SOURCE_FILES_FULL_LIST).awk' && \
-	  $(SED) 's|^.*\(/$(SOURCES_PATH)/.*\)$$|sf["\1"]="&"|' '$(SOURCE_FILES_FULL_LIST)' >>'$(SOURCE_FILES_FULL_LIST).awk' && \
-	  echo '}' >>'$(SOURCE_FILES_FULL_LIST).awk' && \
-	  echo '{ if (sf[$$2]) print $$1 " " sf[$$2] }' >>'$(SOURCE_FILES_FULL_LIST).awk' && \
+	  echo 'BEGIN {' >'$(SOURCE_FILES_FULL_LIST).awk'; \
+	  $(SED) 's|^.*\(/$(SOURCES_PATH)/.*\)$$|sf["\1"]="&"|' '$(SOURCE_FILES_FULL_LIST)' >>'$(SOURCE_FILES_FULL_LIST).awk'; \
+	  echo '}' >>'$(SOURCE_FILES_FULL_LIST).awk'; \
+	  echo '{ if (sf[$$2]) print $$1 " " sf[$$2] }' >>'$(SOURCE_FILES_FULL_LIST).awk'; \
 	  echo 'cat $(JAVA_DEPENDENCIES).tmp | $(XARGS) $(JDEPS) -v' && \
 	  cat '$(JAVA_DEPENDENCIES).tmp' | $(XARGS) $(JDEPS) -v | \
 	    $(SED) -n 's|\.|/|g;s|^  *\([^ ]\{1,\}\) *-> *\([^ ]\{1,\}\).*$$|$(CLASSES_ALIAS_DIR)/\1.class: /$(SOURCES_PATH)/\2.java|p' | \
@@ -762,7 +786,7 @@ ifdef JDEPS
 	fi
 else # def JDEPS
 	@if test -s '$(SOURCE_FILES_FULL_LIST)' -a  -s '$(JAVAC_SOURCE_FILES_LIST)'; then \
-	  echo '$(JAVAC) -Xlint:deprecation,unchecked -d $(CLASSES_DIR) $(CLASSPATH) @$(JAVAC_SOURCEPATH_LIST) @$(SOURCE_FILES_FULL_LIST)' && \
+	  echo '$(JAVAC) -Xlint:deprecation,unchecked -d $(CLASSES_DIR) $(CLASSPATH) @$(JAVAC_SOURCEPATH_LIST) @$(SOURCE_FILES_FULL_LIST)'; \
 	  $(JAVAC) -Xlint:deprecation,unchecked -d '$(CLASSES_DIR)' $(CLASSPATH) '@$(JAVAC_SOURCEPATH_LIST)' '@$(SOURCE_FILES_FULL_LIST)'; \
 	fi
 endif # def JDEPS
@@ -786,7 +810,7 @@ JAVAH_CLASS_NAMES :=
 #   $(1) - component/native library name
 #   $(2) - component base directory (must end with '/')
 #   $(3) - C source file names
-SOURCES_TO_OBJECTS = $(patsubst $(2)$(NATIVE_SOURCES_PATH)/%.c,$(OBJECTS_DIR)/$(1)/%.o,$(3))
+SOURCES_TO_OBJECTS = $(patsubst $(2)$(NATIVE_SOURCES_PATH)/%.c,$(OBJECTS_DIR)/$(1)/%.lo,$(3))
 
 
 # Convert C source file names into the names of their respective
@@ -859,20 +883,18 @@ define BUILD_NATIVE_COMPILE_RULES
 # header files the .d file depends on) when executing targets that do
 # not build any object or executable file (e.g., the clean target)
 ifeq ($(findstring $(empty) $(MAKECMDGOALS) , $(NO_BUILD_TARGETS) ),)
-include $$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4))
+-include $$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4))
 endif
 
 
-$$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4)):
-	$(MKDIR_P) '$$(dir $$@)' && \
-	$(CPP) $(CPPFLAGS) $(JAVAH_CPPFLAGS) '-I$(INCLUDE_DIR)' \
-	  -MT '$$(call SOURCES_TO_OBJECTS,$(1),$(2),$(4)) $$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4))' \
-	  -M -MG -MF '$$@' '$(4)'
-
-$$(call SOURCES_TO_OBJECTS,$(1),$(2),$(4)):
-	$(MKDIR_P) '$$(dir $$@)' && \
-	$(CC) $(CFLAGS) $(3) $(CPPFLAGS) $(JAVAH_CPPFLAGS) \
-	  '-I$(INCLUDE_DIR)' -c -o '$$@' '$(4)'
+$$(call SOURCES_TO_OBJECTS,$(1),$(2),$(4)): $(JAVAH_CLASSES_LIST)
+	@$(MKDIR_P) '$$(dir $$@)'
+	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(CFLAGS) $(3) \
+	  $(CPPFLAGS) $(JAVAH_CPPFLAGS) '-I$(INCLUDE_DIR)' -MT '$$@' -MD \
+	  -MP -MF '$$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4)).tmp' \
+	  -c -o '$$@' '$(4)'
+	@mv -f '$$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4)).tmp' \
+	       '$$(call SOURCES_TO_DEPENDENCIES,$(1),$(2),$(4))'
 
 endef # BUILD_NATIVE_COMPILE_RULES
 
@@ -900,7 +922,7 @@ ifeq ($(1),)
 $$(error Missing library basename)
 endif
 
-MK_LIBNAME := $(if $(2),$(1)-$(2).so,$(1).so)
+MK_LIBNAME := $(if $(2),$(1)-$(2).la,$(1).la)
 
 $(1).version := $(2)
 $(1).basename := $$(MK_LIBNAME)
@@ -930,7 +952,10 @@ $$(call CLASSNAME_TO_FULL_INCLUDEFILE,$(8)): $(JAVAH_CLASSES_LIST);
 $$(foreach var,$(5),$$(eval $$(call BUILD_NATIVE_COMPILE_RULES,$(1),$(4),$(6),$$(var))))
 
 $$(value $(1).buildname): $$(call SOURCES_TO_OBJECTS,$(1),$(4),$(5)) $$(patsubst %,$(OBJECTS_DIR)/%,$(9)) | $(NATIVE_DIR)
-	$(CC) $(CFLAGS) $(6) $(LDFLAGS) $(7) -Wl,--no-undefined -o '$$@' $$(patsubst %,'%',$$^) $(LIBS)
+	$(LIBTOOL) --tag=CC --mode=link $(CC) -module -avoid-version \
+	  -no-undefined -shrext $(SHREXT) -rpath '$(LIB_INSTALL_PATH)' \
+	  $(CFLAGS) $(6) $(LDFLAGS) $(7) -o '$$@' \
+	  $$(patsubst %,'%',$$^) $(LIBS)
 
 endif # eq ($(3),yes)
 
@@ -947,7 +972,7 @@ ifeq ($(HAS_FILE),yes)
 	$(foreach var,$?,$(file >>$@,$(call CLASSFILE_TO_CLASSNAME,$(var)))) \
 	if test -s '$@'; then \
 	  echo 'Building JNI headers'; \
-	  echo 'cat $@ | $(XARGS) $(JAVAH) -d $(INCLUDE_DIR) $(CLASSPATH)' && \
+	  echo 'cat $@ | $(XARGS) $(JAVAH) -d $(INCLUDE_DIR) $(CLASSPATH)'; \
 	  cat '$@' | $(XARGS) $(JAVAH) -d '$(INCLUDE_DIR)' $(CLASSPATH); \
 	fi
 else
@@ -956,7 +981,7 @@ else
 	$(foreach var,$?,$(shell echo '$(call CLASSFILE_TO_CLASSNAME,$(var))' >>'$@')) \
 	if test -s '$@'; then \
 	  echo 'Building JNI headers'; \
-	  echo 'cat $@ | $(XARGS) $(JAVAH) -d $(INCLUDE_DIR) $(CLASSPATH)' && \
+	  echo 'cat $@ | $(XARGS) $(JAVAH) -d $(INCLUDE_DIR) $(CLASSPATH)'; \
 	  cat '$@' | $(XARGS) $(JAVAH) -d '$(INCLUDE_DIR)' $(CLASSPATH); \
 	fi
 endif
@@ -1073,6 +1098,11 @@ $$(foreach var,$(1),$$(eval $$(call INTO_STAGE,$(3),$$(var)): $$(var) | $(STAGE_
 endef # ADD_PACKAGE_RULES
 
 
+# libtool's libraries cannot be just copied (nor linked)
+$(STAGE_DIR)/$(TAR_ROOT_DIR)/%.la:
+	@$(RM) '$@'
+	$(LIBTOOL) --mode=install cp '$<' '$(abs_top_builddir)/$(dir $@)'
+
 # *.sh files are treated specially: they are both filtered as resources
 # and made executable
 $(STAGE_DIR)/$(TAR_ROOT_DIR)/%.sh: | $(RESOURCES_FILTER_SCRIPT)
@@ -1082,13 +1112,13 @@ $(STAGE_DIR)/$(TAR_ROOT_DIR)/%.sh: | $(RESOURCES_FILTER_SCRIPT)
 # 'ln' is faster than 'cp -fpR', but will fail if source and build
 # trees reside in different file systems.
 $(STAGE_DIR)/$(TAR_ROOT_DIR)/%:
-	$(RM) '$@' && \
+	@$(RM) '$@'
 	ln '$<' '$@'
 
 # Javadoc documentation requires a specific rule
 # NOTE: Can't use hard links here -- they don't work with directories
 $(STAGE_DIR)/$(TAR_ROOT_DIR)/doc/index.html: $(DOC_DIR)/index.html
-	$(RM) -r '$(dir $@)' && \
+	@$(RM) -r '$(dir $@)'
 	$(MKDIR_P) '$(STAGE_DIR)/$(TAR_ROOT_DIR)' && \
 	cp -fpR '$(DOC_DIR)' '$(dir $@)'
 
@@ -1100,13 +1130,13 @@ $(STAGE_DIR)/$(TAR_ROOT_DIR)/doc/index.html: $(DOC_DIR)/index.html
 #       specified one.
 PACKAGE_STAGE_LIST := $(STAGE_DIR)/$(TAR_ROOT_DIR)/doc/index.html
 
-# Alongside the 'bin', 'lib' and 'native' directories, the binary
-# package will also contain the 'doc' directory created by the previous
-# rule
+# Alongside the 'bin', 'lib' and '$(native.path)' directories,
+# the binary package will also contain the 'doc' directory created by
+# the previous rule
 $(eval $(call ADD_PACKAGE_RULES,$(BAR_README_BUILD_LIST),PACKAGE_STAGE_LIST,))
 $(eval $(call ADD_PACKAGE_RULES,$(BAR_BIN_BUILD_LIST),PACKAGE_STAGE_LIST,/bin))
 $(eval $(call ADD_PACKAGE_RULES,$(BAR_JAR_BUILD_LIST),PACKAGE_STAGE_LIST,/lib))
-$(eval $(call ADD_PACKAGE_RULES,$(FOO_NATIVE_BUILD_LIST),PACKAGE_STAGE_LIST,/native))
+$(eval $(call ADD_PACKAGE_RULES,$(FOO_NATIVE_BUILD_LIST),PACKAGE_STAGE_LIST,/$(native.path)))
 
 
 .PHONY: all install install-strip bin-packages uninstall
@@ -1114,7 +1144,7 @@ $(eval $(call ADD_PACKAGE_RULES,$(FOO_NATIVE_BUILD_LIST),PACKAGE_STAGE_LIST,/nat
 # Build the binary package as a TAR archive -- to generate a different
 # kind of archive you need to modify only the following two rules
 $(PACKAGE_DIR)/$(TAR_ROOT_DIR)-bin.tar$(COMPRESS_EXT): $(PACKAGE_STAGE_LIST) | $(PACKAGE_DIR)
-	$(RM) '$@' && \
+	@$(RM) '$@'
 	dir=$$(pwd) && \
 	cd '$(STAGE_DIR)' && \
 	tardir='$(TAR_ROOT_DIR)' && \
@@ -1149,7 +1179,7 @@ $(foreach var,$(DIST_FILES),$(eval $(DIST_DIR)/$(TAR_ROOT_DIR)/$(var): $(var)))
 # 'ln' is faster than 'cp -fpR', but will fail if source and build
 # trees reside in different file systems.
 $(DIST_DIR)/$(TAR_ROOT_DIR)/%:
-	$(RM) '$@' && \
+	@$(RM) '$@'
 	$(MKDIR_P) '$(dir $@)' && \
 	ln '$<' '$@'
 
@@ -1159,7 +1189,7 @@ $(DIST_DIR)/$(TAR_ROOT_DIR)/%:
 # Build the source package as a TAR archive -- to generate a different
 # kind of archive you need to modify only the following two rules
 $(PACKAGE_DIR)/$(TAR_ROOT_DIR)-src.tar$(COMPRESS_EXT): $(addprefix $(DIST_DIR)/$(TAR_ROOT_DIR)/,$(DIST_FILES)) | $(PACKAGE_DIR)
-	$(RM) '$@' && \
+	@$(RM) '$@'
 	dir=$$(pwd) && \
 	cd '$(DIST_DIR)' && \
 	tardir='$(TAR_ROOT_DIR)' && \
@@ -1199,13 +1229,13 @@ else
 	$(foreach var,$(SOURCE_DIRECTORIES),$(shell echo $(ECHO_N) "$(var)$(SOURCES_PATH)$(JAVA_PATH_SEPARATOR)$(ECHO_C)" >>'$@.tmp')) \
 	$(shell echo "" >>'$@.tmp') \
 	$(foreach var,$(sort $(JAVA_PACKAGES)),$(shell echo '$(var)' >>'$@.tmp')) \
-	cat '$@.tmp' | $(SED) '1sa^x\(.*\)$(JAVA_PATH_SEPARATOR)$$a\1a' >'$@' && \
-	$(RM) '$@.tmp'
+	cat '$@.tmp' | $(SED) '1sa^x\(.*\)$(JAVA_PATH_SEPARATOR)$$a\1a' >'$@'
+	@$(RM) '$@.tmp'
 endif
 endif
 
 $(DOC_DIR)/index.html: $(SOURCE_FILES) | $(BUILD_DIR) $(JAVA_PACKAGES_LIST)
-	@$(RM) -r '$(dir $@)' && \
+	@$(RM) -r '$(dir $@)'
 	$(JAVADOC) $(JAVADOC_OPTIONS) -d '$(DOC_DIR)' $(DOC_CLASSPATH) \
 	  -overview '@top_srcdir@/doc/overview.html' @$(JAVA_PACKAGES_LIST)
 
@@ -1227,4 +1257,5 @@ clean:
 
 distclean: clean
 	-$(RM) Makefile config.status config.cache config.log \
-	       configure.lineno config.status.lineno config.h
+	       configure.lineno config.status.lineno config.h \
+	       libtool
