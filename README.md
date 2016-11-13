@@ -274,11 +274,12 @@ into the following parts:
 5. Java components
 6. Native components
 7. Components' build.mk files
-8. Binary packages
-9. Run tests
-10. Source packages
-11. Documentation
-12. Clean-up
+8. Automatic remake
+9. Binary packages
+10. Run tests
+11. Source packages
+12. Documentation
+13. Clean-up
 
 However, the parts you may need to tweak are:
 

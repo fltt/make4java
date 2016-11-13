@@ -93,7 +93,7 @@ AS_IF([test "x$enable_native" = xyes],
 AC_CANONICAL_HOST
 LT_INIT([shared])
 dnl We are going to build a shared library the JVM will "dlopen".
-dnl To build such a library, libtool requires us to specify the
+dnl To build such a library, Libtool requires us to specify the
 dnl '-module' option. However doing so will change the shared library
 dnl extension from the native one to '.so', causing the JVM to fail to
 dnl find it. To fix this issue we'll use the '-shrext' to restore the
@@ -138,5 +138,6 @@ AS_IF([test "x$missing_jdeps_programs" != x],
 AS_IF([test "x$TAR" = xfalse],
       [AC_MSG_WARN([could not find the tar utility, the tar package won't be built])])
 AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([stamp-h], [echo timestamp >stamp-h])
 AC_CONFIG_HEADERS([config.h])
 AC_OUTPUT
