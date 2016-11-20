@@ -56,6 +56,7 @@ JAVADOC = @JAVADOC@
 JAVAH = @JAVAH@
 JDEPS = @JDEPS@
 JAVA_PATH_SEPARATOR = @JAVA_PATH_SEPARATOR@
+JAVA_PREPENDS_LIB = @JAVA_PREPENDS_LIB@
 
 # Common tools -- every UNIX-like OS should have these (and a
 # Bourne-like shell)
@@ -158,6 +159,14 @@ resources.libs := libs
 #       path specified in the '-rpath' option, i.e., $(LIB_INSTALL_PATH)
 native.path := $(patsubst /%,%,$(LIB_INSTALL_PATH))
 
+# Usually Java's System.loadLibrary() prepends the "lib" prefix to the
+# name of the loaded library, but on some OSs (e.g., Windows) it does
+# not.
+ifeq ($(JAVA_PREPENDS_LIB),no)
+lib.prefix := lib
+else
+lib.prefix :=
+endif
 
 # Component-relative path to Java source files
 SOURCES_PATH := src
@@ -243,6 +252,7 @@ NATIVE_DIR := $(BUILD_DIR)/$(resources.libs)
 # "configure", "aclocal.m4" and "config.h.in". This list is used by
 # the "Automatic remake" section.
 AUTOCONF_DIST_FILES := configure.ac m4/fltt_prog_jar.m4 \
+                       m4/fltt_prog_java_pathsep.m4 \
                        m4/fltt_prog_java.m4 m4/fltt_prog_javac.m4 \
                        m4/fltt_prog_javadoc.m4 m4/fltt_prog_javah.m4 \
                        m4/fltt_prog_jdeps.m4 m4/libtool.m4 \
@@ -332,7 +342,7 @@ $(CLASSES_ALIAS_DIR): | $(CLASSES_DIR)
 # i.e., for each "varname" listed, the string "${varname}" will be
 # looked for in the resources and replaced with the value of
 # the variable "varname"
-RESOURCE_PLACEHOLDERS := package.name package.version resources.jars resources.libs native.path
+RESOURCE_PLACEHOLDERS := package.name package.version resources.jars resources.libs native.path lib.prefix
 
 
 # The following macros are meant to be used in the components' build.mk.

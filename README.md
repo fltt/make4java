@@ -102,6 +102,12 @@ And to run the tests:
 make check
 ```
 
+> **NOTE**: BSD make *is not* GNU Make.
+> The syntax of (simple) rules is the same, but everything else is
+> different (e.g., the available functions and their syntax).
+> However, GNU Make is available as an external package or port and
+> its executable is usually named `gmake`.
+
 If you prefer not to build your project in the same directory tree of
 the source code, just create a "build" directory somewhere and invoke
 the `configure` script from there:
@@ -117,8 +123,12 @@ Native code and the tests (which check the native code) are disabled by
 default.
 To enable them you can pass `configure` the `--enable-foo-feature`
 option.
-I've tested the native code only in Linux and FreeBSD, however adding
-more architectures should be trivial using Autoconf and Libtool.
+I've tested the native code on GNU/Linux (Arch Linux), FreeBSD 10.3 and
+11.0, Mac OS X 10.11.6 (with Xcode 8.0) and Windows 10 Enterprise (with
+Cygwin 2.6.0, see the [next section](#compiling-on-windows) for
+instructions).
+Thank to Autoconf and Libtool adding more architectures should be
+trivial.
 
 For a list of supported options and environment variables affecting the
 build process run:
@@ -157,6 +167,54 @@ make distclean
 ```
 
 For more information, read the sample `configure.ac` and `Makefile.in`.
+
+Compiling on Windows
+--------------------
+Windows is quite different from Unix, it has different tools, libraries,
+header files and APIs.
+This means that to compile applications written for Unix on Windows you
+have to modify the source code.
+
+An alternative is to use Cygwin to provide your application with an
+"adaptation layer" that simulates an Unix environment atop the Windows
+APIs and libraries.
+Tools and header files are instead provided by the several Cygwin's
+packages.
+
+In this section I describe how to build the sample project using Cygwin.
+
+First install a suitable JDK -- you don't need a special one, the regular
+Windows version will do.
+
+Then [download][] and execute the Cygwin installer -- I've used version
+2.6.0 on Windows 10 Enterprise -- then, from the list of packages to be
+installed, select all the required tools: GNU Make, Autoconf, Libtool,
+the binutils and a compiler (and maybe something more I can't remember
+right now).
+
+Now, for some unknown (to me) reason Cygwin's GCC won't build working
+DLLs.
+I had to install MinGW's GCC instead (from Cygwin's packages) and
+configure the sample project for a cross-compilation:
+
+```
+./configure --host=x86_64-w64-mingw32 --enable-foo-feature
+            JAVA_PREFIX=/cygdrive/c/Java/jdk1.8.0_112
+```
+
+The JDK I used while testing **make4java** didn't update the PATH
+environment variable to point to `javac`, `javah`, ecc., so I had to
+pass `configure` the `JAVA_PREFIX` variable.
+
+> **NOTE**: If you run the resulting `bin/run.sh` script you may get the
+> following error message after the expected output: "Cannot delete temp
+> file: C:\cygwin64\tmp\foo-2883378982810232885.jar" (the long number
+> will be different).
+> This is not a problem with Cygwin or MinGW's GCC, it is a problem with
+> the inability of the JVM to delete its own temporary files (for
+> another unknown reason -- it's been years since the last time I used a
+> Windows system, still there are plenty of unknown reasons for things
+> to fail).
 
 A real world example
 --------------------
@@ -606,3 +664,4 @@ If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
 
 [clone of the Mobicents jSS7]: http://github.com/fltt/mobicents-jss7
+[download]: https://cygwin.com/install.html

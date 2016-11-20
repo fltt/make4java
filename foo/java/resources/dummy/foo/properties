@@ -1,2 +1,2 @@
 ! Encode in ISO-8859-1
-native.libname = foo-${libfoo.version}
+native.libname = ${lib.prefix}foo-${libfoo.version}

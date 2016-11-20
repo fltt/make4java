@@ -98,7 +98,16 @@ printf "Ljava\57lang\57String\73\51V\0\41\0\6\0\7\0\0\0\0\0\2\0\1\0\10\0" >>Conf
 printf "\11\0\1\0\12\0\0\0\21\0\1\0\1\0\0\0\5\52\267\0\1\261\0\0\0\0\0\11" >>Conftest.class
 printf "\0\13\0\14\0\1\0\12\0\0\0\30\0\2\0\1\0\0\0\14\262\0\2\22\3\270\0" >>Conftest.class
 printf "\4\266\0\5\261\0\0\0\0\0\0" >>Conftest.class
-fltt_javahome=`$JAVA Conftest 2>/dev/null`
+# Convert java.home from win32 to Cygwin (Unix) format. This is not
+# really necessary as Cygwin's tools can handle both win32 and Cygwin
+# filenames, but I prefer to manage a single filename format to prevent
+# bad surprises.
+fltt_conftest_out=`$JAVA Conftest 2>/dev/null`
+AS_CASE([$build_os],
+        [cygwin*], [fltt_javahome=`cygpath -u "$fltt_conftest_out" 2>/dev/null`
+AS_IF([test "$?" -ne 0],
+      [fltt_javahome="$fltt_conftest_out"])],
+        [fltt_javahome="$fltt_conftest_out"])
 rm -f Conftest.class
 AS_IF([test "x$fltt_javahome" != x],
       [AS_IF([test -d "$fltt_javahome/include"],
@@ -127,4 +136,12 @@ CPPFLAGS="$fltt_save_CPPFLAGS"])])
 AS_IF([test "x$fltt_cv_prog_javah_cppflags" != xno],
       [JAVAH_CPPFLAGS="$fltt_cv_prog_javah_cppflags"])
 AC_SUBST([JAVAH_CPPFLAGS])[]dnl
+dnl On Windows, Java's System.loadLibrary() doesn't prepend the "lib"
+dnl prefix.
+AC_CACHE_CHECK([whether the lib prefix is prepended to JNI dynamic libraries],
+               [fltt_cv_prog_java_prepends_lib],
+               [AS_CASE([$host_os],
+                        [cygwin*|mingw*], [fltt_cv_prog_java_prepends_lib=no],
+                        [fltt_cv_prog_java_prepends_lib=yes])])
+AC_SUBST([JAVA_PREPENDS_LIB], [$fltt_cv_prog_java_prepends_lib])[]dnl
 ])# FLTT_PROG_JAVAH
